@@ -49,7 +49,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-light-bg dark:bg-[#191919] pt-8 pb-8 relative">
+    <div className="min-h-screen flex flex-col items-center bg-[#f6f5f4] dark:bg-[#191919] pt-8 pb-8 relative">
       {/* Theme Toggle - Top Right Corner */}
       <div className="absolute top-4 right-4">
         <ThemeToggle />
@@ -65,7 +65,7 @@ export default function LoginPage() {
       </div>
 
       {/* Login Form */}
-      <div className="w-full max-w-md p-8 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-lg border border-gray-200 dark:border-[#3d3d3d] -mt-24 transition-none">
+      <div className="w-full max-w-md p-8 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-lg border border-[#e5e5e6] dark:border-[#3d3d3d] -mt-24 transition-none">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">Sign in to continue</h2>
         </div>
@@ -87,7 +87,7 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 dark:border-[#3d3d3d] rounded-lg bg-white dark:bg-[#262626] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+              className="w-full px-4 py-2 border border-[#e5e5e6] dark:border-[#3d3d3d] rounded-lg bg-white dark:bg-[#262626] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
             />
           </div>
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 dark:border-[#3d3d3d] rounded-lg bg-white dark:bg-[#262626] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
+              className="w-full px-4 py-2 border border-[#e5e5e6] dark:border-[#3d3d3d] rounded-lg bg-white dark:bg-[#262626] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
             />
           </div>
 

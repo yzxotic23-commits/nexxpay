@@ -15,12 +15,18 @@ const poppins = Poppins({
 export const metadata = {
   title: 'NexSight Dashboard',
   description: 'Modern KPI Dashboard for Financial Monitoring',
+  icons: {
+    icon: '/logo/eyes.png',
+    shortcut: '/logo/eyes.png',
+    apple: '/logo/eyes.png',
+  },
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/logo/eyes.png" type="image/png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
