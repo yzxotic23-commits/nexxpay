@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/lib/toast-context'
 import { useSession } from 'next-auth/react'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -48,11 +49,25 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-light-bg dark:bg-dark-bg transition-colors">
-      <div className="w-full max-w-md p-8 bg-light-card dark:bg-dark-surface rounded-lg shadow-lg">
+    <div className="min-h-screen flex flex-col items-center bg-light-bg dark:bg-[#191919] pt-8 pb-8 relative">
+      {/* Theme Toggle - Top Right Corner */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      {/* Logo Header - Landing Page Style */}
+      <div className="text-center mb-0">
+        <img 
+          src="/logo/nexsight-transparent-2.png" 
+          alt="NexSight Logo" 
+          className="h-96 w-96 mx-auto object-contain"
+        />
+      </div>
+
+      {/* Login Form */}
+      <div className="w-full max-w-md p-8 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-lg border border-gray-200 dark:border-[#3d3d3d] -mt-24 transition-none">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">NexSight Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400">Sign in to continue</p>
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">Sign in to continue</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -63,7 +78,7 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label htmlFor="username" className="block text-sm font-medium mb-2 text-foreground">
+            <label htmlFor="username" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
               Username
             </label>
             <input
@@ -72,12 +87,12 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-light-bg dark:bg-dark-bg text-foreground focus:outline-none focus:ring-2 focus:ring-gold-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-[#3d3d3d] rounded-lg bg-white dark:bg-[#262626] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-2 text-foreground">
+            <label htmlFor="password" className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
               Password
             </label>
             <input
@@ -86,7 +101,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-light-bg dark:bg-dark-bg text-foreground focus:outline-none focus:ring-2 focus:ring-gold-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-[#3d3d3d] rounded-lg bg-white dark:bg-[#262626] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500"
             />
           </div>
 
@@ -99,7 +114,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
+        <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
           <p>Default credentials: admin / admin</p>
         </div>
       </div>

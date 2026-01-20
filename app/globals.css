@@ -20,11 +20,16 @@
   }
 }
 
-/* Smooth transitions for theme switching */
-* {
+/* Smooth transitions for theme switching - exclude html and body to prevent flicker */
+*:not(html):not(body) {
   transition-property: background-color, border-color, color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 300ms;
+  transition-duration: 150ms;
+}
+
+/* Disable transitions on initial load */
+html.no-transition * {
+  transition: none !important;
 }
 
 /* Custom Scrollbar Styles */

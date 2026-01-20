@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     domains: [],
+    remotePatterns: [],
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
