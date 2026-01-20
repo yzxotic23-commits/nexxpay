@@ -2,6 +2,7 @@ import { Inter, Poppins } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/lib/toast-context'
 import { ToastContainerWrapper } from '@/components/ToastContainerWrapper'
+import SessionProviderWrapper from '@/components/SessionProviderWrapper'
 
 const poppins = Poppins({
   weight: ['300', '400', '500', '600', '700'],
@@ -19,10 +20,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} font-sans antialiased`}>
-        <ToastProvider>
-          {children}
-          <ToastContainerWrapper />
-        </ToastProvider>
+        <SessionProviderWrapper>
+          <ToastProvider>
+            {children}
+            <ToastContainerWrapper />
+          </ToastProvider>
+        </SessionProviderWrapper>
       </body>
     </html>
   )
