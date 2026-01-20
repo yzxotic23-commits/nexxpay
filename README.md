@@ -153,7 +153,7 @@ nexsight-dashboard-secret-key-change-in-production-2024
 #### 2. NEXTAUTH_URL (Required)
 URL production aplikasi Anda. Untuk project ini:
 ```
-https://nexsight.vercel.app
+https://nexsight-tau.vercel.app
 ```
 
 **PENTING**: Ganti dengan URL Vercel Anda jika berbeda.
@@ -169,7 +169,7 @@ https://nexsight.vercel.app
 5. Klik **Add New** lagi
 6. Tambahkan variable kedua:
    - **Name**: `NEXTAUTH_URL`
-   - **Value**: `https://nexsight.vercel.app` (atau URL Vercel Anda)
+   - **Value**: `https://nexsight-tau.vercel.app` (atau URL Vercel Anda)
    - **Environment**: Pilih **Production**, **Preview**, dan **Development** (semua)
 7. Klik **Save**
 8. **Redeploy** aplikasi (go to Deployments → klik 3 dots → Redeploy)
