@@ -4,6 +4,7 @@ import { signIn } from 'next-auth/react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/lib/toast-context'
+import { useSession } from 'next-auth/react'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -28,9 +29,13 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid credentials')
         showToast('Login failed. Please check your credentials.', 'error')
-      } else {
+      } else if (result?.ok) {
         showToast('Login successful! Welcome back!', 'success')
-        router.push('/dashboard')
+        // Redirect to dashboard after successful login
+        window.location.href = '/dashboard'
+      } else {
+        setError('Login failed. Please try again.')
+        showToast('Login failed. Please try again.', 'error')
       }
     } catch (err) {
       setError('An error occurred. Please try again.')
