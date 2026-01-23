@@ -1,6 +1,7 @@
 'use client'
 
 import Sidebar from '@/components/Sidebar'
+import TopBar from '@/components/TopBar'
 import { useUIStore } from '@/lib/stores/uiStore'
 
 export default function DashboardLayout({ children }) {
@@ -10,7 +11,10 @@ export default function DashboardLayout({ children }) {
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
       <div className="flex h-screen">
         <Sidebar />
-        <main className="flex-1 p-6 lg:ml-0 overflow-x-hidden overflow-y-auto transition-all duration-300">{children}</main>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <TopBar />
+          <main className="flex-1 p-6 overflow-x-hidden overflow-y-auto transition-all duration-300">{children}</main>
+        </div>
       </div>
     </div>
   )

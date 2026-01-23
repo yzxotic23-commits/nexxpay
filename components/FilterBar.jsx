@@ -372,7 +372,7 @@ export default function FilterBar({ showCurrency = false, swapOrder = false }) {
       </button>
       {isCurrencyDropdownOpen && (
         <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-900 rounded-lg shadow-lg z-10">
-          {['MYR', 'SGD', 'USC'].map((currency) => (
+          {['ALL', 'MYR', 'SGD', 'USC'].map((currency) => (
             <button
               key={currency}
               onClick={() => handleCurrencySelect(currency)}

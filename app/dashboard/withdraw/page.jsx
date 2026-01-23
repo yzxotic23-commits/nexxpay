@@ -4,26 +4,91 @@ import { useEffect, useState, useRef } from 'react'
 import { useFilterStore } from '@/lib/stores/filterStore'
 import { useDashboardStore } from '@/lib/stores/dashboardStore'
 import { getWithdrawData } from '@/lib/utils/mockData'
-import { formatCurrency, formatNumber } from '@/lib/utils/formatters'
+import { formatCurrency, formatNumber, formatPercentage } from '@/lib/utils/formatters'
 import KPICard from '@/components/KPICard'
 import ChartContainer from '@/components/ChartContainer'
 import FilterBar from '@/components/FilterBar'
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine } from 'recharts'
-import { ArrowUpCircle, Clock, Search, Bell, HelpCircle, Settings, User, ChevronDown, AlertCircle, DollarSign, AlertTriangle, Power } from 'lucide-react'
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine, LineChart, Line } from 'recharts'
+import { ArrowUpCircle, ArrowDownCircle, Clock, Search, Bell, HelpCircle, Settings, User, ChevronDown, AlertCircle, DollarSign, AlertTriangle, Power, Activity, TrendingUp } from 'lucide-react'
+import { useThemeStore } from '@/lib/stores/themeStore'
 import Link from 'next/link'
 import ThemeToggle from '@/components/ThemeToggle'
 import { useSession, signOut } from 'next-auth/react'
 import { useToast } from '@/lib/toast-context'
 
-// Custom Tooltip Component for Area Chart
+// Custom Tooltip Component - Updated design
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
+    const { theme } = useThemeStore.getState()
+    
+    // Handle multiple brands/markets
+    if (payload.length > 1) {
+      const markets = payload.map((p) => {
+        const marketColors = {
+          'MYR': '#DEC05F',
+          'SGD': theme === 'dark' ? '#C0C0C0' : '#1f2937',
+          'USC': '#3b82f6'
+        }
+        const brandColors = {
+          'WBSG': '#DEC05F',
+          'M24SG': '#f97316',
+          'OK188SG': '#60a5fa',
+          'OXSG': '#14b8a6',
+          'FWSG': theme === 'dark' ? '#ffffff' : '#1f2937',
+          'ABSG': '#a78bfa'
+        }
+        const color = marketColors[p.name] || brandColors[p.name] || p.color || '#DEC05F'
+        return {
+          name: p.name,
+          value: p.value || 0,
+          color
+        }
+      })
+      
+      const total = markets.reduce((sum, m) => sum + (m.value || 0), 0)
+      
     return (
-      <div className="bg-gray-800 dark:bg-gray-900 rounded-lg p-3 shadow-lg border border-gray-700">
-        <p className="text-white text-sm mb-1">{label}</p>
-        <p className="text-gold-500 font-bold text-base">
-          {payload[0].value.toFixed(1)}K
-        </p>
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow-xl border-2 border-gray-200 dark:border-gray-700 min-w-[200px]">
+          <p className="text-gray-900 dark:text-white text-sm font-bold mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+            {label}
+          </p>
+          <div className="space-y-2">
+            {markets.map((entry, index) => (
+              <div key={index} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300 dark:border-gray-600" style={{ backgroundColor: entry.color }}></div>
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{entry.name}</span>
+                </div>
+                <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                  {typeof entry.value === 'number' ? entry.value.toFixed(entry.value < 1 ? 2 : 0) : entry.value}
+                </span>
+              </div>
+            ))}
+            {total > 0 && (
+              <div className="pt-2 mt-2 border-t-2 border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">Total</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">{total.toFixed(total < 1 ? 2 : 0)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+    
+    // Single value tooltip
+    const value = payload[0].value || 0
+    return (
+      <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow-xl border-2 border-gray-200 dark:border-gray-700">
+        <p className="text-gray-900 dark:text-white text-sm font-bold mb-2">{label}</p>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300 dark:border-gray-600" style={{ backgroundColor: payload[0].color || '#DEC05F' }}></div>
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{payload[0].name}:</span>
+          <span className="text-xs font-semibold text-gray-900 dark:text-white">
+            {typeof value === 'number' ? value.toFixed(value < 1 ? 2 : 0) : value}
+          </span>
+        </div>
       </div>
     )
   }
@@ -51,9 +116,13 @@ export default function WithdrawMonitorPage() {
   const { data: session } = useSession()
   const { selectedMonth, selectedCurrency } = useFilterStore()
   const { withdrawData, setWithdrawData } = useDashboardStore()
-  const [activeTab, setActiveTab] = useState('Market Overview')
+  const { theme } = useThemeStore()
+  const [activeTab, setActiveTab] = useState('Overview')
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
+  const [selectedBrand, setSelectedBrand] = useState('ALL')
+  const [isBrandDropdownOpen, setIsBrandDropdownOpen] = useState(false)
   const userDropdownRef = useRef(null)
+  const brandDropdownRef = useRef(null)
 
   // Close user dropdown when clicking outside
   useEffect(() => {
@@ -61,17 +130,24 @@ export default function WithdrawMonitorPage() {
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
         setIsUserDropdownOpen(false)
       }
+      if (brandDropdownRef.current && !brandDropdownRef.current.contains(event.target)) {
+        setIsBrandDropdownOpen(false)
     }
-    if (isUserDropdownOpen) {
+    }
+    if (isUserDropdownOpen || isBrandDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside)
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [isUserDropdownOpen])
+  }, [isUserDropdownOpen, isBrandDropdownOpen])
 
   useEffect(() => {
     setWithdrawData(getWithdrawData(selectedMonth, selectedCurrency))
+    // Reset brand to 'ALL' when currency changes
+    if (selectedCurrency !== 'SGD') {
+      setSelectedBrand('ALL')
+    }
   }, [selectedMonth, selectedCurrency, setWithdrawData])
 
   if (!withdrawData) {
@@ -95,68 +171,184 @@ export default function WithdrawMonitorPage() {
     }
   })
 
-  const tabs = ['Market Overview', 'Brand Comparison', 'Slow Transaction', 'Case Volume']
+  const tabs = ['Overview', 'Brand Comparison', 'Slow Transaction', 'Case Volume']
+  const brands = ['ALL', 'WBSG', 'M24SG', 'OK188SG', 'OXSG', 'FWSG', 'ABSG']
+  
+  // Get available brands based on selected currency
+  const getAvailableBrands = () => {
+    if (selectedCurrency === 'SGD') {
+      return brands
+    }
+    return ['ALL']
+  }
+  
+  const availableBrands = getAvailableBrands()
+  
+  // Calculate KPI data based on selected currency and brand
+  const calculateOverviewData = () => {
+    const totalDays = withdrawData.dailyData.length
+    let totalTransaction = 0
+    let totalTransAutomation = 0
+    let totalProcessingTime = 0
+    let totalOver60s = 0
+    let totalCoverage = 0
+    
+    withdrawData.dailyData.forEach((day, index) => {
+      if (selectedCurrency === 'ALL') {
+        // Sum all markets
+        totalTransaction += day.count
+        totalTransAutomation += Math.floor(day.count * 0.9)
+        totalProcessingTime += 25 + (index % 10) * 1.5
+        totalOver60s += Math.floor(day.count * 0.02)
+        totalCoverage += 85 + (index % 10) * 1
+      } else if (selectedCurrency === 'MYR') {
+        const myrCount = Math.floor(day.count * 0.4)
+        totalTransaction += myrCount
+        totalTransAutomation += Math.floor(myrCount * 0.9)
+        totalProcessingTime += 25 + (index % 10) * 1.5 + (Math.sin(index * 7) * 10000) % 1 * 5
+        totalOver60s += Math.floor(myrCount * 0.02)
+        totalCoverage += 85 + (index % 10) * 1 + (Math.sin(index * 7) * 10000) % 1 * 3
+      } else if (selectedCurrency === 'SGD') {
+        if (selectedBrand === 'ALL') {
+          // Sum all brands
+          const sgdCount = Math.floor(day.count * 0.35)
+          totalTransaction += sgdCount
+          totalTransAutomation += Math.floor(sgdCount * 0.9)
+          totalProcessingTime += 28 + (index % 10) * 1.5 + (Math.sin(index * 7) * 10000) % 1 * 5
+          totalOver60s += Math.floor(sgdCount * 0.02)
+          totalCoverage += 88 + (index % 10) * 1 + (Math.sin(index * 7) * 10000) % 1 * 3
+        } else {
+          // Specific brand
+          const brandMultiplier = {
+            'WBSG': 1.2,
+            'M24SG': 1.0,
+            'OK188SG': 0.9,
+            'OXSG': 0.8,
+            'FWSG': 0.7,
+            'ABSG': 0.6
+          }[selectedBrand] || 1
+          
+          const sgdCount = Math.floor(day.count * 0.35 * brandMultiplier)
+          totalTransaction += sgdCount
+          totalTransAutomation += Math.floor(sgdCount * 0.9)
+          totalProcessingTime += (28 + (index % 10) * 1.5) * brandMultiplier
+          totalOver60s += Math.floor(sgdCount * 0.02)
+          totalCoverage += (88 + (index % 10) * 1) * brandMultiplier
+        }
+      } else if (selectedCurrency === 'USC') {
+        const uscCount = Math.floor(day.count * 0.25)
+        totalTransaction += uscCount
+        totalTransAutomation += Math.floor(uscCount * 0.9)
+        totalProcessingTime += 22 + (index % 10) * 1.5 + (Math.sin(index * 7) * 10000) % 1 * 5
+        totalOver60s += Math.floor(uscCount * 0.02)
+        totalCoverage += 82 + (index % 10) * 1 + (Math.sin(index * 7) * 10000) % 1 * 3
+      }
+    })
+    
+    return {
+      totalTransaction,
+      totalTransAutomation,
+      avgPTimeAutomation: totalDays > 0 ? totalProcessingTime / totalDays : 0,
+      transOver60sAutomation: totalOver60s,
+      coverageRate: totalDays > 0 ? totalCoverage / totalDays : 0
+    }
+  }
+  
+  const overviewData = calculateOverviewData()
+
+  // Color for SGD based on theme
+  const sgdColor = theme === 'dark' ? '#C0C0C0' : '#1f2937' // Silver for dark mode, black for light mode
+
+  // Brand colors - using theme colors (gold, gray, blue variations)
+  // FWSG uses white in dark mode, dark gray in light mode
+  const brandColors = {
+    'WBSG': '#DEC05F',      // Gold
+    'M24SG': '#f97316',     // Orange
+    'OK188SG': '#60a5fa',   // Light Blue
+    'OXSG': '#14b8a6',      // Teal
+    'FWSG': theme === 'dark' ? '#ffffff' : '#1f2937',  // White in dark mode, Dark Gray in light mode
+    'ABSG': '#a78bfa'       // Purple
+  }
+
+  // Chart data following date range - with all brands data for SGD
+  const chartData = withdrawData.dailyData.map((day, index) => {
+    const baseData = {
+      date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    }
+    
+    // Add data for each brand (only for SGD currency)
+    if (selectedCurrency === 'SGD') {
+      brands.slice(1).forEach((brand) => {
+        const multiplier = {
+          'WBSG': 1.2,
+          'M24SG': 1.0,
+          'OK188SG': 0.9,
+          'OXSG': 0.8,
+          'FWSG': 0.7,
+          'ABSG': 0.6
+        }[brand] || 1
+        
+        // Use index for consistent random values
+        const randomSeed = index * 7 + brand.charCodeAt(0)
+        const random = (Math.sin(randomSeed) * 10000) % 1
+        
+        baseData[`${brand}_overdueTrans`] = Math.floor(day.count * 0.15 * multiplier)
+        baseData[`${brand}_avgProcessingTime`] = (25 + random * 15) * multiplier
+        baseData[`${brand}_coverageRate`] = (85 + random * 10) * (multiplier * 0.9)
+        baseData[`${brand}_transactionVolume`] = Math.floor(day.count * multiplier)
+      })
+    }
+    
+    // Aggregate data for ALL or when not SGD
+    baseData.overdueTrans = Math.floor(day.count * 0.15)
+    baseData.avgProcessingTime = 25 + (index % 10) * 1.5
+    baseData.coverageRate = 85 + (index % 10) * 1
+    baseData.transactionVolume = day.count
+    
+    // Always add market data (MYR, SGD, USC) for all metrics when "ALL" is selected
+    const randomVariation = (Math.sin(index * 7) * 10000) % 1
+    baseData.myr_overdueTrans = Math.floor(day.count * 0.15 * 0.4)
+    baseData.myr_avgProcessingTime = 25 + (index % 10) * 1.5 + randomVariation * 5
+    baseData.myr_coverageRate = 85 + (index % 10) * 1 + randomVariation * 3
+    baseData.myr_transactionVolume = Math.floor(day.count * 0.4)
+    
+    baseData.sgd_overdueTrans = Math.floor(day.count * 0.15 * 0.35)
+    baseData.sgd_avgProcessingTime = 28 + (index % 10) * 1.5 + randomVariation * 5
+    baseData.sgd_coverageRate = 88 + (index % 10) * 1 + randomVariation * 3
+    baseData.sgd_transactionVolume = Math.floor(day.count * 0.35)
+    
+    baseData.usc_overdueTrans = Math.floor(day.count * 0.15 * 0.25)
+    baseData.usc_avgProcessingTime = 22 + (index % 10) * 1.5 + randomVariation * 5
+    baseData.usc_coverageRate = 82 + (index % 10) * 1 + randomVariation * 3
+    baseData.usc_transactionVolume = Math.floor(day.count * 0.25)
+    
+    return baseData
+  })
 
   // Slow Transaction Data
   const slowTransactionData = {
-    totalSlowCases: 4,
-    totalAmountImpacted: 7200,
-    slowestBrand: 'WBSG',
-    currency: 'SGD',
-    currencySymbol: 'S$',
-    transactions: [
-      {
+    totalSlowTransaction: 245,
+    avgProcessingTime: 72.5,
         brand: 'WBSG',
-        customerName: 'Customer A',
-        amount: 1500,
-        completed: '3 hours ago'
-      },
-      {
-        brand: 'M24SG',
-        customerName: 'Customer B',
-        amount: 1200,
-        completed: '6 hours ago'
-      },
-      {
-        brand: 'OK188SG',
-        customerName: 'Customer C',
-        amount: 2500,
-        completed: '1 day ago'
-      },
-      {
-        brand: 'OXSG',
-        customerName: 'Customer D',
-        amount: 2000,
-        completed: '2 days ago'
-      }
+    details: [
+      { brand: 'WBSG', customerName: 'Customer A', amount: 1200, processingTime: 65, completed: '2 hours ago' },
+      { brand: 'M24SG', customerName: 'Customer B', amount: 850, processingTime: 68, completed: '5 hours ago' },
+      { brand: 'OK188SG', customerName: 'Customer C', amount: 3500, processingTime: 75, completed: '1 day ago' },
+      { brand: 'WBSG', customerName: 'Customer D', amount: 2100, processingTime: 82, completed: '1 day ago' },
+      { brand: 'OXSG', customerName: 'Customer E', amount: 950, processingTime: 63, completed: '3 hours ago' },
     ]
   }
 
-  // Calculate max amount for progress bar
-  const maxAmount = Math.max(...slowTransactionData.transactions.map(t => t.amount))
-
-  // Case Volume Data - Over-1-Minute Withdraw Cases by Brand
+  // Case Volume Data
   const caseVolumeData = [
-    { brand: 'WBSG', cases: 10.5 },
-    { brand: 'M24SG', cases: 6.25 },
-    { brand: 'OK188SG', cases: 4.5 },
-    { brand: 'OXSG', cases: 3.25 },
-    { brand: 'FWSG', cases: 1.5 },
-    { brand: 'ABSG', cases: 0 },
+    { brand: 'WBSG', totalCase: 8.75, totalTransAutomation: 1250, totalOverdue: 245 },
+    { brand: 'M24SG', totalCase: 5, totalTransAutomation: 2100, totalOverdue: 180 },
+    { brand: 'OK188SG', totalCase: 3.75, totalTransAutomation: 1850, totalOverdue: 120 },
+    { brand: 'OXSG', totalCase: 2.5, totalTransAutomation: 1500, totalOverdue: 95 },
+    { brand: 'FWSG', totalCase: 1, totalTransAutomation: 980, totalOverdue: 45 },
+    { brand: 'ABSG', totalCase: 0, totalTransAutomation: 750, totalOverdue: 20 },
   ]
 
-  // Calculate total cases and identify top 2 brands
-  const totalCases = caseVolumeData.reduce((sum, item) => sum + item.cases, 0)
-  const sortedByCases = [...caseVolumeData].sort((a, b) => b.cases - a.cases)
-  const top2Brands = sortedByCases.slice(0, 2).map(item => item.brand)
-  const top2Percentage = ((sortedByCases[0].cases + sortedByCases[1].cases) / totalCases * 100).toFixed(0)
-
-  // Add color and highlight info to data
-  const caseVolumeChartData = caseVolumeData.map(item => ({
-    ...item,
-    color: top2Brands.includes(item.brand) ? '#dc2626' : '#f87171', // dark red for top 2, lighter red for others
-    isTop2: top2Brands.includes(item.brand)
-  }))
 
   // Custom Tooltip for Case Volume
   const CaseVolumeTooltip = ({ active, payload }) => {
@@ -174,18 +366,16 @@ export default function WithdrawMonitorPage() {
     return null
   }
 
-  // Brand Comparison Data - Avg Processed Time (seconds)
-  // Sorted by slowest first
+  // Brand Comparison Data
   const brandComparisonData = [
-    { brand: 'WBSG', avgTime: 72 },
-    { brand: 'M24SG', avgTime: 48 },
-    { brand: 'OK188SG', avgTime: 42 },
-    { brand: 'OXSG', avgTime: 32 },
-    { brand: 'FWSG', avgTime: 28 },
-    { brand: 'ABSG', avgTime: 20 },
+    { brand: 'WBSG', avgTime: 72, coverageRate: 75 },
+    { brand: 'M24SG', avgTime: 48, coverageRate: 82 },
+    { brand: 'OK188SG', avgTime: 42, coverageRate: 88 },
+    { brand: 'OXSG', avgTime: 32, coverageRate: 92 },
+    { brand: 'FWSG', avgTime: 28, coverageRate: 95 },
+    { brand: 'ABSG', avgTime: 20, coverageRate: 98 },
   ].map(item => ({
     ...item,
-    // Determine color based on avgTime
     color: item.avgTime <= 30 ? '#10b981' : item.avgTime <= 60 ? '#f59e0b' : '#ef4444',
     status: item.avgTime <= 30 ? 'Fast' : item.avgTime <= 60 ? 'Moderate' : 'Slow'
   }))
@@ -210,82 +400,9 @@ export default function WithdrawMonitorPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Withdraw Transaction Monitor</h1>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search anything..."
-                className="pl-10 pr-4 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gold-500 w-56"
-              />
-            </div>
-
-            <button className="relative bg-white dark:bg-dark-card p-2 text-gray-700 dark:text-gray-200 hover:bg-gold-100 dark:hover:bg-gold-500/20 rounded-lg shadow-sm border border-gray-300 dark:border-gray-700 transition-colors duration-150">
-              <Bell className="h-4 w-4" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full"></span>
-            </button>
-
-            <button className="bg-white dark:bg-dark-card p-2 text-gray-700 dark:text-gray-200 hover:bg-gold-100 dark:hover:bg-gold-500/20 rounded-lg shadow-sm border border-gray-300 dark:border-gray-700 transition-colors duration-150">
-              <HelpCircle className="h-4 w-4" />
-            </button>
-
-            <ThemeToggle />
-
-            <Link href="/dashboard/settings" className="bg-white dark:bg-dark-card p-2 text-gray-700 dark:text-gray-200 hover:bg-gold-100 dark:hover:bg-gold-500/20 rounded-lg shadow-sm border border-gray-300 dark:border-gray-700 transition-colors duration-150">
-              <Settings className="h-4 w-4" />
-            </Link>
-
-            <div className="flex items-center gap-2 pl-3 border-l border-gray-300 dark:border-gray-700">
-              <div className="w-10 h-10 rounded-full bg-gold-500 flex items-center justify-center">
-                <User className="w-5 h-5 text-gray-900" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {session?.user?.name || 'Martin Septimus'}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-300">
-                  {session?.user?.role || 'Admin'}
-                </span>
-              </div>
-              <div className="relative" ref={userDropdownRef}>
-                <button 
-                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                  className="ml-3 p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gold-100 dark:hover:bg-gold-500/20 rounded-lg transition-colors flex items-center justify-center"
-                  title="User Menu"
-                >
-                  <ChevronDown className={`h-4 w-4 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isUserDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-900 rounded-lg shadow-lg z-50">
-                    <button
-                      onClick={() => {
-                        showToast('Logging out...', 'success')
-                        setTimeout(() => {
-                          signOut({ callbackUrl: '/login' })
-                        }, 500)
-                        setIsUserDropdownOpen(false)
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2 first:rounded-t-lg last:rounded-b-lg"
-                    >
-                      <Power className="h-4 w-4" />
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Tabs and Filter Bar - Tabs center, MYR and Month right */}
-        <div className="flex items-center justify-between mt-12 relative">
+      <div className="mb-6">
+        <div className="flex items-center justify-between mt-4 relative">
           {/* Tabs - Center (absolute positioned) */}
           <nav className="absolute left-1/2 transform -translate-x-1/2 inline-flex bg-white dark:bg-dark-card p-1 rounded-full" aria-label="Tabs">
             {tabs.map((tab) => (
@@ -303,40 +420,81 @@ export default function WithdrawMonitorPage() {
             ))}
           </nav>
           
-          {/* Filter Bar - Right (MYR then Month) */}
+          {/* Filter Bar - Right (Brand then Market then Month) */}
           <div className="ml-auto flex items-center gap-3">
+            {/* Brand Dropdown Filter - Only show for SGD and Overview tab */}
+            {selectedCurrency === 'SGD' && activeTab === 'Overview' ? (
+              <div className="relative" ref={brandDropdownRef}>
+                <button
+                  onClick={() => setIsBrandDropdownOpen(!isBrandDropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-900 dark:text-gray-900 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                  style={{ backgroundColor: '#DEC05F' }}
+                >
+                  <span className="text-gray-900 dark:text-gray-900">{selectedBrand}</span>
+                  {isBrandDropdownOpen ? (
+                    <ChevronDown className="h-3.5 w-3.5 text-gray-900 dark:text-gray-900 rotate-180 transition-transform" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 text-gray-900 dark:text-gray-900 transition-transform" />
+                  )}
+                </button>
+                {isBrandDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-900 rounded-lg shadow-lg z-50">
+                    {availableBrands.map((brand) => (
+                      <button
+                        key={brand}
+                        onClick={() => {
+                          setSelectedBrand(brand)
+                          setIsBrandDropdownOpen(false)
+                        }}
+                        className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                          selectedBrand === brand
+                            ? 'bg-gold-100 dark:bg-gold-500/20 text-gray-900 dark:text-white'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        } ${brand === availableBrands[0] ? 'rounded-t-lg' : ''} ${brand === availableBrands[availableBrands.length - 1] ? 'rounded-b-lg' : ''}`}
+                      >
+                        {brand}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="relative" style={{ width: '120px', height: '32px' }}></div>
+            )}
             <FilterBar showCurrency={true} swapOrder={true} />
           </div>
         </div>
       </div>
 
-      {/* Market Overview - Summary from All Tabs */}
-      {activeTab === 'Market Overview' && (
-        <>
-          {/* Summary KPI Cards from All Tabs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Brand Comparison Summary */}
+      {/* Overview Tab */}
+      {activeTab === 'Overview' && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <KPICard
-              title="Slowest Brand"
-              value={brandComparisonData[0]?.brand || 'N/A'}
+              title="Total Transaction"
+              value={formatNumber(overviewData.totalTransaction)}
               change={0}
-              icon={AlertTriangle}
+              icon={Activity}
               trend="neutral"
-              iconColor="text-red-500"
-              iconBg="bg-red-100 dark:bg-red-900/20"
             />
             <KPICard
-              title="Avg Processing Time"
-              value={`${brandComparisonData[0]?.avgTime || 0}s`}
+              title="Total Trans Automation"
+              value={formatNumber(overviewData.totalTransAutomation)}
+              change={0}
+              icon={TrendingUp}
+              trend="neutral"
+            />
+            <KPICard
+              title="Avg P.Time Automation"
+              value={`${overviewData.avgPTimeAutomation.toFixed(1)}s`}
               change={0}
               icon={Clock}
               trend="neutral"
             />
-            
-            {/* Slow Transaction Summary */}
             <KPICard
-              title="Total Slow Cases"
-              value={slowTransactionData.totalSlowCases.toString()}
+              title="Trans >60s Automation"
+              value={formatNumber(overviewData.transOver60sAutomation)}
               change={0}
               icon={AlertCircle}
               trend="neutral"
@@ -344,156 +502,528 @@ export default function WithdrawMonitorPage() {
               iconBg="bg-red-100 dark:bg-red-900/20"
             />
             <KPICard
-              title="Total Amount Impacted"
-              value={formatCurrency(slowTransactionData.totalAmountImpacted, slowTransactionData.currency, slowTransactionData.currencySymbol)}
+              title="Coverage Rate"
+              value={formatPercentage(overviewData.coverageRate)}
               change={0}
-              icon={DollarSign}
+              icon={ArrowDownCircle}
               trend="neutral"
-              iconColor="text-orange-500"
-              iconBg="bg-orange-100 dark:bg-orange-900/20"
             />
           </div>
 
-          {/* Summary Cards from Each Tab */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Brand Comparison Summary */}
-            <div className="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Brand Comparison Summary</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Fastest Brand</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">{brandComparisonData[brandComparisonData.length - 1]?.brand || 'N/A'}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Avg Time (Fastest)</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">{brandComparisonData[brandComparisonData.length - 1]?.avgTime || 0}s</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Avg Time (Slowest)</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">{brandComparisonData[0]?.avgTime || 0}s</span>
-                </div>
-              </div>
-            </div>
+          {/* Charts - Follow Date Range */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartContainer title="Overdue Trans Automation">
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    {brands.slice(1).map((brand) => (
+                      <linearGradient key={brand} id={`color${brand}Withdraw`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={brandColors[brand]} stopOpacity={0.4} />
+                        <stop offset="50%" stopColor={brandColors[brand]} stopOpacity={0.15} />
+                        <stop offset="95%" stopColor={brandColors[brand]} stopOpacity={0.05} />
+                      </linearGradient>
+                    ))}
+                    <linearGradient id="colorMYROverdueWithdraw" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#DEC05F" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#DEC05F" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#DEC05F" stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="colorSGDOverdueWithdraw" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={sgdColor} stopOpacity={0.4} />
+                      <stop offset="50%" stopColor={sgdColor} stopOpacity={0.15} />
+                      <stop offset="95%" stopColor={sgdColor} stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="colorUSCOverdueWithdraw" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#6b7280" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={60}
+                    axisLine={{ strokeWidth: 0.5 }}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="#6b7280"
+                    axisLine={{ strokeWidth: 0.5 }}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                  <Legend 
+                    verticalAlign="top" 
+                    align="left" 
+                    wrapperStyle={{ paddingTop: '0px', paddingBottom: '20px', marginTop: '-10px', fontSize: '14px' }} 
+                    iconType="circle" 
+                    iconSize={8}
+                    fontSize={14}
+                  />
+                  {(selectedCurrency === 'ALL' || (selectedCurrency === 'SGD' && selectedBrand === 'ALL')) ? (
+                    <>
+                      <Area
+                        type="monotone"
+                        dataKey="myr_overdueTrans"
+                        stroke="#DEC05F"
+                        fill="url(#colorMYROverdueWithdraw)"
+                        name="MYR"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="sgd_overdueTrans"
+                        stroke={sgdColor}
+                        fill="url(#colorSGDOverdueWithdraw)"
+                        name="SGD"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="usc_overdueTrans"
+                        stroke="#3b82f6"
+                        fill="url(#colorUSCOverdueWithdraw)"
+                        name="USC"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </>
+                  ) : selectedCurrency === 'MYR' ? (
+                    <Area
+                      type="monotone"
+                      dataKey="myr_overdueTrans"
+                      stroke="#DEC05F"
+                      fill="url(#colorMYROverdueWithdraw)"
+                      name="MYR"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  ) : selectedCurrency === 'SGD' ? (
+                    selectedBrand !== 'ALL' ? (
+                      <Area
+                        type="monotone"
+                        dataKey={`${selectedBrand}_overdueTrans`}
+                        stroke={brandColors[selectedBrand]}
+                        fill={`url(#color${selectedBrand}Withdraw)`}
+                        name={selectedBrand}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    ) : (
+                      <>
+                        {brands.slice(1).map((brand) => (
+                          <Area
+                            key={brand}
+                            type="monotone"
+                            dataKey={`${brand}_overdueTrans`}
+                            stroke={brandColors[brand]}
+                            fill={`url(#color${brand}Withdraw)`}
+                            name={brand}
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        ))}
+                      </>
+                    )
+                  ) : selectedCurrency === 'USC' ? (
+                    <Area
+                      type="monotone"
+                      dataKey="usc_overdueTrans"
+                      stroke="#3b82f6"
+                      fill="url(#colorUSCOverdueWithdraw)"
+                      name="USC"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  ) : null}
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
 
-            {/* Slow Transaction Summary */}
-            <div className="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Slow Transaction Summary</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Slowest Brand Today</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">{slowTransactionData.slowestBrand}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Total Cases</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">{slowTransactionData.totalSlowCases}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Amount Impacted</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">
-                    {formatCurrency(slowTransactionData.totalAmountImpacted, slowTransactionData.currency, slowTransactionData.currencySymbol)}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <ChartContainer title="Average Processing time Automation">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#6b7280" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={60}
+                    axisLine={{ strokeWidth: 0.5 }}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="#6b7280"
+                    axisLine={{ strokeWidth: 0.5 }}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                  <Legend 
+                    verticalAlign="top" 
+                    align="left" 
+                    wrapperStyle={{ paddingTop: '0px', paddingBottom: '20px', marginTop: '-10px', fontSize: '14px' }} 
+                    iconType="circle" 
+                    iconSize={8}
+                    fontSize={14}
+                  />
+                  {(selectedCurrency === 'ALL' || (selectedCurrency === 'SGD' && selectedBrand === 'ALL')) ? (
+                    <>
+                      <Line
+                        type="monotone"
+                        dataKey="myr_avgProcessingTime"
+                        stroke="#DEC05F"
+                        strokeWidth={2}
+                        name="MYR"
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="sgd_avgProcessingTime"
+                        stroke={sgdColor}
+                        strokeWidth={2}
+                        name="SGD"
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="usc_avgProcessingTime"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        name="USC"
+                        dot={false}
+                      />
+                    </>
+                  ) : selectedCurrency === 'MYR' ? (
+                    <Line
+                      type="monotone"
+                      dataKey="myr_avgProcessingTime"
+                      stroke="#DEC05F"
+                      strokeWidth={2}
+                      name="MYR"
+                      dot={false}
+                    />
+                  ) : selectedCurrency === 'SGD' ? (
+                    selectedBrand !== 'ALL' ? (
+                      <Line
+                        type="monotone"
+                        dataKey={`${selectedBrand}_avgProcessingTime`}
+                        stroke={brandColors[selectedBrand]}
+                        strokeWidth={2}
+                        name={selectedBrand}
+                        dot={false}
+                      />
+                    ) : (
+                      <>
+                        {brands.slice(1).map((brand) => (
+                          <Line
+                            key={brand}
+                            type="monotone"
+                            dataKey={`${brand}_avgProcessingTime`}
+                            stroke={brandColors[brand]}
+                            strokeWidth={2}
+                            name={brand}
+                            dot={false}
+                          />
+                        ))}
+                      </>
+                    )
+                  ) : selectedCurrency === 'USC' ? (
+                    <Line
+                      type="monotone"
+                      dataKey="usc_avgProcessingTime"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      name="USC"
+                      dot={false}
+                    />
+                  ) : null}
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
 
-            {/* Case Volume Summary */}
-            <div className="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Case Volume Summary</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Total Slow Cases</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">{totalCases.toFixed(1)}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Top 2 Brands</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">{top2Brands.join(', ')}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-light-bg dark:bg-dark-bg rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Top 2 Share</span>
-                  <span className="text-base font-semibold text-gray-900 dark:text-white">{top2Percentage}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+            <ChartContainer title="Coverage Rate">
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    {brands.slice(1).map((brand) => (
+                      <linearGradient key={brand} id={`colorCoverage${brand}Withdraw`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={brandColors[brand]} stopOpacity={0.4} />
+                        <stop offset="50%" stopColor={brandColors[brand]} stopOpacity={0.15} />
+                        <stop offset="95%" stopColor={brandColors[brand]} stopOpacity={0.05} />
+                      </linearGradient>
+                    ))}
+                    <linearGradient id="colorCoverageMYRWithdraw" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#DEC05F" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#DEC05F" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#DEC05F" stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="colorCoverageSGDWithdraw" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={sgdColor} stopOpacity={0.4} />
+                      <stop offset="50%" stopColor={sgdColor} stopOpacity={0.15} />
+                      <stop offset="95%" stopColor={sgdColor} stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="colorCoverageUSCWithdraw" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                      <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#6b7280" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={60}
+                    axisLine={{ strokeWidth: 0.5 }}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="#6b7280"
+                    axisLine={{ strokeWidth: 0.5 }}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                  <Legend 
+                    verticalAlign="top" 
+                    align="left" 
+                    wrapperStyle={{ paddingTop: '0px', paddingBottom: '20px', marginTop: '-10px', fontSize: '14px' }} 
+                    iconType="circle" 
+                    iconSize={8}
+                    fontSize={14}
+                  />
+                  {(selectedCurrency === 'ALL' || (selectedCurrency === 'SGD' && selectedBrand === 'ALL')) ? (
+                    <>
+                      <Area
+                        type="monotone"
+                        dataKey="myr_coverageRate"
+                        stroke="#DEC05F"
+                        fill="url(#colorCoverageMYRWithdraw)"
+                        name="MYR"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="sgd_coverageRate"
+                        stroke={sgdColor}
+                        fill="url(#colorCoverageSGDWithdraw)"
+                        name="SGD"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="usc_coverageRate"
+                        stroke="#3b82f6"
+                        fill="url(#colorCoverageUSCWithdraw)"
+                        name="USC"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </>
+                  ) : selectedCurrency === 'MYR' ? (
+                    <Area
+                      type="monotone"
+                      dataKey="myr_coverageRate"
+                      stroke="#DEC05F"
+                      fill="url(#colorCoverageMYRWithdraw)"
+                      name="MYR"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  ) : selectedCurrency === 'SGD' ? (
+                    selectedBrand !== 'ALL' ? (
+                      <Area
+                        type="monotone"
+                        dataKey={`${selectedBrand}_coverageRate`}
+                        stroke={brandColors[selectedBrand]}
+                        fill={`url(#colorCoverage${selectedBrand}Withdraw)`}
+                        name={selectedBrand}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    ) : (
+                      <>
+                        {brands.slice(1).map((brand) => (
+                          <Area
+                            key={brand}
+                            type="monotone"
+                            dataKey={`${brand}_coverageRate`}
+                            stroke={brandColors[brand]}
+                            fill={`url(#colorCoverage${brand}Withdraw)`}
+                            name={brand}
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        ))}
+                      </>
+                    )
+                  ) : selectedCurrency === 'USC' ? (
+                    <Area
+                      type="monotone"
+                      dataKey="usc_coverageRate"
+                      stroke="#3b82f6"
+                      fill="url(#colorCoverageUSCWithdraw)"
+                      name="USC"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  ) : null}
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
 
-      {activeTab === 'Brand Comparison' && (
-        <ChartContainer
-          title="Brand Avg Processed Time Comparison"
-          subtitle="Processing efficiency across brands • Sorted by slowest first"
-        >
-          <div>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart 
-                data={brandComparisonData} 
-                layout="vertical"
-                margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeWidth={1} opacity={0.2} horizontal={false} />
+            <ChartContainer title="Transaction Volume Trend Analysis">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
                 <XAxis 
-                  type="number"
-                  domain={[0, 80]}
-                  ticks={[0, 20, 40, 60, 80]}
+                    dataKey="date" 
                   stroke="#6b7280" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={60}
                   axisLine={{ strokeWidth: 0.5 }} 
                   tickLine={false}
-                  tick={{ fill: '#6b7280' }}
-                  label={{ value: 'Avg Processed Time (seconds)', position: 'bottom', offset: 10, style: { fill: '#6b7280', textAnchor: 'middle' } }}
                 />
                 <YAxis 
-                  type="category"
-                  dataKey="brand"
                   stroke="#6b7280" 
                   axisLine={{ strokeWidth: 0.5 }}
                   tickLine={false}
-                  tick={{ fill: '#6b7280' }}
-                  width={80}
-                />
-                <Tooltip content={<BrandComparisonTooltip />} />
-                <ReferenceLine 
-                  x={60} 
-                  stroke="#ef4444" 
-                  strokeDasharray="5 5" 
+                  />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                  <Legend 
+                    verticalAlign="top" 
+                    align="left" 
+                    wrapperStyle={{ paddingTop: '0px', paddingBottom: '20px', marginTop: '-10px', fontSize: '14px' }} 
+                    iconType="circle" 
+                    iconSize={8}
+                    fontSize={14}
+                  />
+                  {(selectedCurrency === 'ALL' || (selectedCurrency === 'SGD' && selectedBrand === 'ALL')) ? (
+                    <>
+                      <Line
+                        type="monotone"
+                        dataKey="myr_transactionVolume"
+                        stroke="#DEC05F"
                   strokeWidth={2}
-                  label={{ value: '60s threshold', position: 'top', fill: '#ef4444', fontSize: 12 }}
-                />
-                <Bar 
-                  dataKey="avgTime" 
-                  radius={[0, 4, 4, 0]}
-                >
+                        name="MYR"
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="sgd_transactionVolume"
+                        stroke={sgdColor}
+                        strokeWidth={2}
+                        name="SGD"
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="usc_transactionVolume"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        name="USC"
+                        dot={false}
+                      />
+                    </>
+                  ) : selectedCurrency === 'MYR' ? (
+                    <Line
+                      type="monotone"
+                      dataKey="myr_transactionVolume"
+                      stroke="#DEC05F"
+                      strokeWidth={2}
+                      name="MYR"
+                      dot={false}
+                    />
+                  ) : selectedCurrency === 'SGD' ? (
+                    selectedBrand !== 'ALL' ? (
+                      <Line
+                        type="monotone"
+                        dataKey={`${selectedBrand}_transactionVolume`}
+                        stroke={brandColors[selectedBrand]}
+                        strokeWidth={2}
+                        name={selectedBrand}
+                        dot={false}
+                      />
+                    ) : (
+                      <>
+                        {brands.slice(1).map((brand) => (
+                          <Line
+                            key={brand}
+                            type="monotone"
+                            dataKey={`${brand}_transactionVolume`}
+                            stroke={brandColors[brand]}
+                            strokeWidth={2}
+                            name={brand}
+                            dot={false}
+                          />
+                        ))}
+                      </>
+                    )
+                  ) : selectedCurrency === 'USC' ? (
+                    <Line
+                      type="monotone"
+                      dataKey="usc_transactionVolume"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      name="USC"
+                      dot={false}
+                    />
+                  ) : null}
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+                </div>
+                </div>
+      )}
+
+      {activeTab === 'Brand Comparison' && (
+        <div className="space-y-6">
+          <ChartContainer title="Brand Avg Processed Time Comparison">
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={brandComparisonData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} horizontal={false} />
+                <XAxis type="number" domain={[0, 80]} stroke="#6b7280" />
+                <YAxis type="category" dataKey="brand" stroke="#6b7280" width={80} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                <ReferenceLine x={60} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} />
+                <Bar dataKey="avgTime" radius={[0, 4, 4, 0]}>
                   {brandComparisonData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-            {/* Legend */}
-            <div className="flex justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#10b981]"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-300">Fast (0-30s)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#f59e0b]"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-300">Moderate (30-60s)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-[#ef4444]"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-300">Slow (&gt;60s)</span>
-              </div>
-            </div>
-          </div>
         </ChartContainer>
+
+          <ChartContainer title="Coverage Rate Comparison">
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={brandComparisonData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} stroke="#6b7280" />
+                <YAxis type="category" dataKey="brand" stroke="#6b7280" width={80} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                <Bar dataKey="coverageRate" radius={[0, 4, 4, 0]} fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </div>
       )}
 
       {activeTab === 'Slow Transaction' && (
-        <>
-          {/* KPI Cards */}
+        <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <KPICard
-              title="Total Slow Cases"
-              value={slowTransactionData.totalSlowCases.toString()}
+              title="Total Slow Transaction"
+              value={formatNumber(slowTransactionData.totalSlowTransaction)}
               change={0}
               icon={AlertCircle}
               trend="neutral"
@@ -501,17 +1031,15 @@ export default function WithdrawMonitorPage() {
               iconBg="bg-red-100 dark:bg-red-900/20"
             />
             <KPICard
-              title="Total Amount Impacted"
-              value={formatCurrency(slowTransactionData.totalAmountImpacted, slowTransactionData.currency, slowTransactionData.currencySymbol)}
+              title="Avg Processing Time"
+              value={`${slowTransactionData.avgProcessingTime}s`}
               change={0}
-              icon={DollarSign}
+              icon={Clock}
               trend="neutral"
-              iconColor="text-orange-500"
-              iconBg="bg-orange-100 dark:bg-orange-900/20"
             />
             <KPICard
-              title="Slowest Brand Today"
-              value={slowTransactionData.slowestBrand}
+              title="Brand"
+              value={slowTransactionData.brand}
               change={0}
               icon={AlertTriangle}
               trend="neutral"
@@ -521,109 +1049,80 @@ export default function WithdrawMonitorPage() {
           </div>
 
           {/* Slow Transaction Details Table */}
-          <div className="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-800">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Slow Transaction Details (&gt; 60 seconds)</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">Actionable transaction-level visibility</p>
-            </div>
-
-            {/* Table */}
+          <div className="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Slow Transaction Details (&gt; 60 Seconds)</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-800">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Brand Name</th>
+                  <tr className="border-b border-gray-200 dark:border-gray-900">
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Brand</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Customer Name</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Amount</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Processing Time</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600 dark:text-gray-300">Completed</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {slowTransactionData.transactions.map((transaction, index) => {
-                    const progressPercentage = (transaction.amount / maxAmount) * 100
-                    return (
-                      <tr key={index} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  {slowTransactionData.details.map((transaction, index) => (
+                      <tr key={index} className="border-b border-gray-100 dark:border-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                         <td className="py-4 px-4">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-white">
                             {transaction.brand}
                           </span>
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{transaction.customerName}</td>
-                        <td className="py-4 px-4">
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                              {formatCurrency(transaction.amount, slowTransactionData.currency, slowTransactionData.currencySymbol)}
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                              <div
-                                className="h-2 rounded-full bg-gradient-to-r from-orange-400 to-red-500"
-                                style={{ width: `${progressPercentage}%` }}
-                              ></div>
-                            </div>
-                          </div>
+                      <td className="py-4 px-4 text-sm font-semibold text-gray-900 dark:text-white">
+                        {formatCurrency(transaction.amount, selectedCurrency || 'SGD', 'S$')}
                         </td>
+                      <td className="py-4 px-4 text-sm text-gray-900 dark:text-white">{transaction.processingTime}s</td>
                         <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-300">{transaction.completed}</td>
                       </tr>
-                    )
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {activeTab === 'Case Volume' && (
-        <ChartContainer
-          title="Over-1-Minute Withdraw Cases by Brand"
-          subtitle="Operational pressure distribution • Slow case volume analysis"
-        >
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart 
-              data={caseVolumeChartData.filter(item => item.cases > 0)} 
-              layout="vertical"
-              margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeWidth={1} opacity={0.2} horizontal={false} />
-              <XAxis 
-                type="number"
-                domain={[0, 12]}
-                ticks={[0, 3, 6, 9, 12]}
-                stroke="#6b7280" 
-                axisLine={{ strokeWidth: 0.5 }} 
-                tickLine={false}
-                tick={{ fill: '#6b7280' }}
-                label={{ value: 'Number of Slow Withdraw Cases', position: 'bottom', offset: 10, style: { fill: '#6b7280', textAnchor: 'middle' } }}
-              />
-              <YAxis 
-                type="category"
-                dataKey="brand"
-                stroke="#6b7280" 
-                axisLine={{ strokeWidth: 0.5 }}
-                tickLine={false}
-                tick={{ fill: '#6b7280' }}
-                width={80}
-              />
-              <Tooltip content={<CaseVolumeTooltip />} />
-              <Bar 
-                dataKey="cases" 
-                radius={[0, 4, 4, 0]}
-              >
-                {caseVolumeChartData.filter(item => item.cases > 0).map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
+        <div className="space-y-6">
+          <ChartContainer title="Total Case Volume Comparison">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={caseVolumeData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} horizontal={false} />
+                <XAxis type="number" stroke="#6b7280" />
+                <YAxis type="category" dataKey="brand" stroke="#6b7280" width={80} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                <Bar dataKey="totalCase" radius={[0, 4, 4, 0]} fill="#ef4444" />
             </BarChart>
           </ResponsiveContainer>
-          {/* Legend */}
-          <div className="flex justify-center mt-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 dark:text-gray-300">
-                Top 2 brands highlighted ({top2Percentage}% of total slow cases)
-              </span>
-            </div>
-          </div>
         </ChartContainer>
+
+          <ChartContainer title="Total Trans Automation">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={caseVolumeData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} horizontal={false} />
+                <XAxis type="number" stroke="#6b7280" />
+                <YAxis type="category" dataKey="brand" stroke="#6b7280" width={80} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                <Bar dataKey="totalTransAutomation" radius={[0, 4, 4, 0]} fill="#10b981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+
+          <ChartContainer title="Total Overdue Transaction Comparison">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={caseVolumeData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} horizontal={false} />
+                <XAxis type="number" stroke="#6b7280" />
+                <YAxis type="category" dataKey="brand" stroke="#6b7280" width={80} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                <Bar dataKey="totalOverdue" radius={[0, 4, 4, 0]} fill="#f59e0b" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </div>
       )}
     </div>
   )

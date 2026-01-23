@@ -3,11 +3,12 @@
 import { signOut, useSession } from 'next-auth/react'
 import { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/lib/toast-context'
-import { Search, Bell, HelpCircle, Settings, User, ChevronDown, Power } from 'lucide-react'
+import { Search, Bell, HelpCircle, Settings, User, ChevronDown, Power, ArrowLeft } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { useFilterStore } from '@/lib/stores/filterStore'
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns'
 import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 
 export default function TopBar() {
   const { data: session } = useSession()
@@ -34,12 +35,13 @@ export default function TopBar() {
 
   // Get page title from pathname
   const getPageTitle = () => {
-    if (pathname === '/dashboard') return 'Dashboard'
-    if (pathname?.includes('/market')) return 'Market Processing'
+    if (pathname === '/dashboard') return 'Dashboard Overview'
+    if (pathname?.includes('/market')) return 'Market Processing Monitor'
     if (pathname?.includes('/deposit')) return 'Deposit Monitor'
-    if (pathname?.includes('/withdraw')) return 'Withdraw Monitor'
-    if (pathname?.includes('/wealth')) return 'Wealth+ Accounts'
-    if (pathname?.includes('/bank')) return 'Bank Accounts'
+    if (pathname?.includes('/withdraw')) return 'Withdraw Transaction Monitor'
+    if (pathname?.includes('/wealth')) return 'Wealth+ Account Monitor'
+    if (pathname?.includes('/bank')) return 'Bank Account Rental & Usage Monitor'
+    if (pathname?.includes('/settings')) return 'Settings'
     return 'Dashboard'
   }
 
@@ -63,9 +65,16 @@ export default function TopBar() {
   }
 
   return (
-    <div className="h-16 bg-white dark:bg-dark-card flex items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-gray-200 dark:border-gray-700">
-      <div className="flex items-center">
-        <h1 className="text-lg font-bold text-gray-900 dark:text-foreground">{getPageTitle()}</h1>
+    <div className="h-16 bg-light-bg dark:bg-dark-bg flex items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center gap-4">
+        {pathname?.includes('/settings') ? (
+          <Link href="/dashboard" className="inline-flex items-center gap-2 p-2 hover:bg-gold-100 dark:hover:bg-gold-500/20 rounded-lg transition-colors">
+            <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">Back To Dashboard</span>
+          </Link>
+        ) : (
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white">{getPageTitle()}</h1>
+        )}
       </div>
 
       <div className="flex items-center space-x-3">
@@ -89,16 +98,16 @@ export default function TopBar() {
 
           <ThemeToggle />
 
-          <button className="bg-white dark:bg-dark-card p-2 text-gray-700 dark:text-gray-200 hover:bg-gold-100 dark:hover:bg-gold-500/20 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 transition-colors duration-150">
-          <Settings className="h-4 w-4" />
-        </button>
+          <Link href="/dashboard/settings" className="bg-white dark:bg-dark-card p-2 text-gray-700 dark:text-gray-200 hover:bg-gold-100 dark:hover:bg-gold-500/20 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 transition-colors duration-150">
+            <Settings className="h-4 w-4" />
+          </Link>
 
         <div className="flex items-center gap-2 pl-3 border-l border-gray-300 dark:border-gray-700">
           <div className="w-10 h-10 rounded-full bg-gold-500 flex items-center justify-center">
             <User className="w-5 h-5 text-gray-900" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-foreground">
+            <span className="text-sm font-medium text-gray-900 dark:text-white">
               {session?.user?.name || 'Martin Septimus'}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-300">
