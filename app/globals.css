@@ -77,3 +77,42 @@ html.no-transition * {
 html {
   scroll-behavior: smooth;
 }
+
+/* Notion-style scrollbar for landing page */
+.hide-scrollbar {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  width: 6px; /* Thin scrollbar like Notion */
+  height: 6px;
+}
+
+.hide-scrollbar::-webkit-scrollbar-track {
+  background: transparent; /* Transparent track */
+}
+
+.hide-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3); /* Subtle gray */
+  border-radius: 10px;
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.hide-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.5); /* Slightly darker on hover */
+}
+
+/* Dark mode Notion-style scrollbar */
+.dark .hide-scrollbar {
+  scrollbar-color: rgba(75, 85, 99, 0.3) transparent; /* Firefox dark mode */
+}
+
+.dark .hide-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(75, 85, 99, 0.3); /* Subtle dark gray */
+}
+
+.dark .hide-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(75, 85, 99, 0.5); /* Slightly lighter on hover */
+}

@@ -125,7 +125,7 @@ export default function Header() {
             </span>
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: '/login' })}
+            onClick={() => signOut({ callbackUrl: '/' })}
             className="ml-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             Logout

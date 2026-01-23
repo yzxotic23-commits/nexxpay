@@ -39,7 +39,7 @@ export default function TopBar() {
     if (pathname?.includes('/deposit')) return 'Deposit Monitor'
     if (pathname?.includes('/withdraw')) return 'Withdraw Monitor'
     if (pathname?.includes('/wealth')) return 'Bank Account Rental'
-    if (pathname?.includes('/bank')) return 'Wealth+ Accounts'
+    if (pathname?.includes('/bank')) return 'Wealths+'
     if (pathname?.includes('/settings')) return 'Settings'
     return 'Dashboard'
   }
@@ -127,7 +127,7 @@ export default function TopBar() {
                     onClick={() => {
                       showToast('Logging out...', 'success')
                       setTimeout(() => {
-                        signOut({ callbackUrl: '/login' })
+                        signOut({ callbackUrl: '/' })
                       }, 500)
                       setIsUserDropdownOpen(false)
                     }}

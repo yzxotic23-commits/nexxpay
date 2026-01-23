@@ -2,7 +2,7 @@
 
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
-export default function KPICard({ title, value, change, changeLabel = 'vs Last Month', icon: Icon, trend = 'up', iconColor, iconBg }) {
+export default function KPICard({ title, value, change, changeLabel = 'vs Last Month', icon: Icon, trend = 'up', iconColor, iconBg, titleAlign = 'left' }) {
   const isPositive = trend === 'up' && change >= 0
   const isNegative = trend === 'down' || change < 0
   const showChange = trend !== 'neutral'

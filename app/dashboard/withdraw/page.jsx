@@ -106,7 +106,7 @@ const CustomBarTooltip = ({ active, payload, label }) => {
           <div className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300 dark:border-gray-600" style={{ backgroundColor: payload[0].color || '#DEC05F' }}></div>
           <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{payload[0].name || 'Value'}:</span>
           <span className="text-xs font-semibold text-gray-900 dark:text-white">
-            {filledValue} transactions
+          {filledValue} transactions
           </span>
         </div>
       </div>
@@ -136,7 +136,7 @@ export default function WithdrawMonitorPage() {
       }
       if (brandDropdownRef.current && !brandDropdownRef.current.contains(event.target)) {
         setIsBrandDropdownOpen(false)
-    }
+      }
     }
     if (isUserDropdownOpen || isBrandDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside)
@@ -195,7 +195,6 @@ export default function WithdrawMonitorPage() {
     let totalTransAutomation = 0
     let totalProcessingTime = 0
     let totalOver60s = 0
-    let totalCoverage = 0
     
     withdrawData.dailyData.forEach((day, index) => {
       if (selectedCurrency === 'ALL') {
@@ -204,14 +203,12 @@ export default function WithdrawMonitorPage() {
         totalTransAutomation += Math.floor(day.count * 0.9)
         totalProcessingTime += 25 + (index % 10) * 1.5
         totalOver60s += Math.floor(day.count * 0.02)
-        totalCoverage += 85 + (index % 10) * 1
       } else if (selectedCurrency === 'MYR') {
         const myrCount = Math.floor(day.count * 0.4)
         totalTransaction += myrCount
         totalTransAutomation += Math.floor(myrCount * 0.9)
         totalProcessingTime += 25 + (index % 10) * 1.5 + (Math.sin(index * 7) * 10000) % 1 * 5
         totalOver60s += Math.floor(myrCount * 0.02)
-        totalCoverage += 85 + (index % 10) * 1 + (Math.sin(index * 7) * 10000) % 1 * 3
       } else if (selectedCurrency === 'SGD') {
         if (selectedBrand === 'ALL') {
           // Sum all brands
@@ -220,7 +217,6 @@ export default function WithdrawMonitorPage() {
           totalTransAutomation += Math.floor(sgdCount * 0.9)
           totalProcessingTime += 28 + (index % 10) * 1.5 + (Math.sin(index * 7) * 10000) % 1 * 5
           totalOver60s += Math.floor(sgdCount * 0.02)
-          totalCoverage += 88 + (index % 10) * 1 + (Math.sin(index * 7) * 10000) % 1 * 3
         } else {
           // Specific brand
           const brandMultiplier = {
@@ -237,7 +233,6 @@ export default function WithdrawMonitorPage() {
           totalTransAutomation += Math.floor(sgdCount * 0.9)
           totalProcessingTime += (28 + (index % 10) * 1.5) * brandMultiplier
           totalOver60s += Math.floor(sgdCount * 0.02)
-          totalCoverage += (88 + (index % 10) * 1) * brandMultiplier
         }
       } else if (selectedCurrency === 'USC') {
         const uscCount = Math.floor(day.count * 0.25)
@@ -245,7 +240,6 @@ export default function WithdrawMonitorPage() {
         totalTransAutomation += Math.floor(uscCount * 0.9)
         totalProcessingTime += 22 + (index % 10) * 1.5 + (Math.sin(index * 7) * 10000) % 1 * 5
         totalOver60s += Math.floor(uscCount * 0.02)
-        totalCoverage += 82 + (index % 10) * 1 + (Math.sin(index * 7) * 10000) % 1 * 3
       }
     })
     
@@ -253,8 +247,7 @@ export default function WithdrawMonitorPage() {
       totalTransaction,
       totalTransAutomation,
       avgPTimeAutomation: totalDays > 0 ? totalProcessingTime / totalDays : 0,
-      transOver60sAutomation: totalOver60s,
-      coverageRate: totalDays > 0 ? totalCoverage / totalDays : 0
+      transOver60sAutomation: totalOver60s
     }
   }
   
@@ -329,17 +322,17 @@ export default function WithdrawMonitorPage() {
     return baseData
   })
 
-  // Slow Transaction Data
+  // Slow Transaction Data (Processing time > 5 minutes = 300 seconds)
   const slowTransactionData = {
     totalSlowTransaction: 245,
-    avgProcessingTime: 72.5,
+    avgProcessingTime: 385.5,
         brand: 'WBSG',
     details: [
-      { brand: 'WBSG', customerName: 'Customer A', amount: 1200, processingTime: 65, completed: '2 hours ago' },
-      { brand: 'M24SG', customerName: 'Customer B', amount: 850, processingTime: 68, completed: '5 hours ago' },
-      { brand: 'OK188SG', customerName: 'Customer C', amount: 3500, processingTime: 75, completed: '1 day ago' },
-      { brand: 'WBSG', customerName: 'Customer D', amount: 2100, processingTime: 82, completed: '1 day ago' },
-      { brand: 'OXSG', customerName: 'Customer E', amount: 950, processingTime: 63, completed: '3 hours ago' },
+      { brand: 'WBSG', customerName: 'Customer A', amount: 1200, processingTime: 305, completed: '2 hours ago' },
+      { brand: 'M24SG', customerName: 'Customer B', amount: 850, processingTime: 318, completed: '5 hours ago' },
+      { brand: 'OK188SG', customerName: 'Customer C', amount: 3500, processingTime: 375, completed: '1 day ago' },
+      { brand: 'WBSG', customerName: 'Customer D', amount: 2100, processingTime: 382, completed: '1 day ago' },
+      { brand: 'OXSG', customerName: 'Customer E', amount: 950, processingTime: 323, completed: '3 hours ago' },
     ]
   }
 
@@ -384,8 +377,8 @@ export default function WithdrawMonitorPage() {
     { brand: 'ABSG', avgTime: 20, coverageRate: 98 },
   ].map(item => ({
     ...item,
-    color: item.avgTime <= 30 ? '#10b981' : item.avgTime <= 60 ? '#f59e0b' : '#ef4444',
-    status: item.avgTime <= 30 ? 'Fast' : item.avgTime <= 60 ? 'Moderate' : 'Slow'
+    color: item.avgTime <= 180 ? '#10b981' : item.avgTime <= 300 ? '#f59e0b' : '#ef4444',
+    status: item.avgTime <= 180 ? 'Fast' : item.avgTime <= 300 ? 'Moderate' : 'Slow'
   }))
 
   // Custom Tooltip for Brand Comparison
@@ -486,7 +479,7 @@ export default function WithdrawMonitorPage() {
       {activeTab === 'Overview' && (
         <div className="space-y-6">
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <KPICard
               title="Total Transaction"
               value={formatNumber(overviewData.totalTransaction)}
@@ -517,18 +510,11 @@ export default function WithdrawMonitorPage() {
               iconColor="text-red-500"
               iconBg="bg-red-100 dark:bg-red-900/20"
             />
-            <KPICard
-              title="Coverage Rate"
-              value={formatPercentage(overviewData.coverageRate)}
-              change={0}
-              icon={ArrowDownCircle}
-              trend="neutral"
-            />
           </div>
 
           {/* Charts - Follow Date Range */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartContainer title="Overdue Trans Automation">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <ChartContainer title="Overdue Transaction">
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={chartData}>
                   <defs>
@@ -661,7 +647,7 @@ export default function WithdrawMonitorPage() {
               </ResponsiveContainer>
             </ChartContainer>
 
-            <ChartContainer title="Average Processing time Automation">
+            <ChartContainer title="Average Processing Time">
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
@@ -762,150 +748,19 @@ export default function WithdrawMonitorPage() {
                 </LineChart>
               </ResponsiveContainer>
             </ChartContainer>
+          </div>
 
-            <ChartContainer title="Coverage Rate">
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={chartData}>
-                  <defs>
-                    {brands.slice(1).map((brand) => (
-                      <linearGradient key={brand} id={`colorCoverage${brand}Withdraw`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={brandColors[brand]} stopOpacity={0.4} />
-                        <stop offset="50%" stopColor={brandColors[brand]} stopOpacity={0.15} />
-                        <stop offset="95%" stopColor={brandColors[brand]} stopOpacity={0.05} />
-                      </linearGradient>
-                    ))}
-                    <linearGradient id="colorCoverageMYRWithdraw" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#DEC05F" stopOpacity={0.4} />
-                      <stop offset="50%" stopColor="#DEC05F" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#DEC05F" stopOpacity={0.05} />
-                    </linearGradient>
-                    <linearGradient id="colorCoverageSGDWithdraw" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={sgdColor} stopOpacity={0.4} />
-                      <stop offset="50%" stopColor={sgdColor} stopOpacity={0.15} />
-                      <stop offset="95%" stopColor={sgdColor} stopOpacity={0.05} />
-                    </linearGradient>
-                    <linearGradient id="colorCoverageUSCWithdraw" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                      <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#6b7280" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={60}
-                    axisLine={{ strokeWidth: 0.5 }}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    stroke="#6b7280"
-                    axisLine={{ strokeWidth: 0.5 }}
-                    tickLine={false}
-                  />
-                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
-                  <Legend 
-                    verticalAlign="top" 
-                    align="left" 
-                    wrapperStyle={{ paddingTop: '0px', paddingBottom: '20px', marginTop: '-10px', fontSize: '14px' }} 
-                    iconType="circle" 
-                    iconSize={8}
-                    fontSize={14}
-                  />
-                  {(selectedCurrency === 'ALL' || (selectedCurrency === 'SGD' && selectedBrand === 'ALL')) ? (
-                    <>
-                      <Area
-                        type="monotone"
-                        dataKey="myr_coverageRate"
-                        stroke="#DEC05F"
-                        fill="url(#colorCoverageMYRWithdraw)"
-                        name="MYR"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="sgd_coverageRate"
-                        stroke={sgdColor}
-                        fill="url(#colorCoverageSGDWithdraw)"
-                        name="SGD"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="usc_coverageRate"
-                        stroke="#3b82f6"
-                        fill="url(#colorCoverageUSCWithdraw)"
-                        name="USC"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </>
-                  ) : selectedCurrency === 'MYR' ? (
-                    <Area
-                      type="monotone"
-                      dataKey="myr_coverageRate"
-                      stroke="#DEC05F"
-                      fill="url(#colorCoverageMYRWithdraw)"
-                      name="MYR"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  ) : selectedCurrency === 'SGD' ? (
-                    selectedBrand !== 'ALL' ? (
-                      <Area
-                        type="monotone"
-                        dataKey={`${selectedBrand}_coverageRate`}
-                        stroke={brandColors[selectedBrand]}
-                        fill={`url(#colorCoverage${selectedBrand}Withdraw)`}
-                        name={selectedBrand}
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    ) : (
-                      <>
-                        {brands.slice(1).map((brand) => (
-                          <Area
-                            key={brand}
-                            type="monotone"
-                            dataKey={`${brand}_coverageRate`}
-                            stroke={brandColors[brand]}
-                            fill={`url(#colorCoverage${brand}Withdraw)`}
-                            name={brand}
-                            strokeWidth={2}
-                            dot={false}
-                          />
-                        ))}
-                      </>
-                    )
-                  ) : selectedCurrency === 'USC' ? (
-                    <Area
-                      type="monotone"
-                      dataKey="usc_coverageRate"
-                      stroke="#3b82f6"
-                      fill="url(#colorCoverageUSCWithdraw)"
-                      name="USC"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  ) : null}
-                </AreaChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-
-            <ChartContainer title="Transaction Volume Trend Analysis">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
+          {/* Transaction Volume Trend Analysis - Full Width */}
+          <ChartContainer title="Transaction Volume Trend Analysis">
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
                 <XAxis 
-                    dataKey="date" 
+                  dataKey="date" 
                   stroke="#6b7280" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={60}
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={60}
                   axisLine={{ strokeWidth: 0.5 }} 
                   tickLine={false}
                 />
@@ -913,44 +768,18 @@ export default function WithdrawMonitorPage() {
                   stroke="#6b7280" 
                   axisLine={{ strokeWidth: 0.5 }}
                   tickLine={false}
-                  />
-                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
-                  <Legend 
-                    verticalAlign="top" 
-                    align="left" 
-                    wrapperStyle={{ paddingTop: '0px', paddingBottom: '20px', marginTop: '-10px', fontSize: '14px' }} 
-                    iconType="circle" 
-                    iconSize={8}
-                    fontSize={14}
-                  />
-                  {(selectedCurrency === 'ALL' || (selectedCurrency === 'SGD' && selectedBrand === 'ALL')) ? (
-                    <>
-                      <Line
-                        type="monotone"
-                        dataKey="myr_transactionVolume"
-                        stroke="#DEC05F"
-                  strokeWidth={2}
-                        name="MYR"
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="sgd_transactionVolume"
-                        stroke={sgdColor}
-                        strokeWidth={2}
-                        name="SGD"
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="usc_transactionVolume"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                        name="USC"
-                        dot={false}
-                      />
-                    </>
-                  ) : selectedCurrency === 'MYR' ? (
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
+                <Legend 
+                  verticalAlign="top" 
+                  align="left" 
+                  wrapperStyle={{ paddingTop: '0px', paddingBottom: '20px', marginTop: '-10px', fontSize: '14px' }} 
+                  iconType="circle" 
+                  iconSize={8}
+                  fontSize={14}
+                />
+                {(selectedCurrency === 'ALL' || (selectedCurrency === 'SGD' && selectedBrand === 'ALL')) ? (
+                  <>
                     <Line
                       type="monotone"
                       dataKey="myr_transactionVolume"
@@ -959,32 +788,14 @@ export default function WithdrawMonitorPage() {
                       name="MYR"
                       dot={false}
                     />
-                  ) : selectedCurrency === 'SGD' ? (
-                    selectedBrand !== 'ALL' ? (
-                      <Line
-                        type="monotone"
-                        dataKey={`${selectedBrand}_transactionVolume`}
-                        stroke={brandColors[selectedBrand]}
-                        strokeWidth={2}
-                        name={selectedBrand}
-                        dot={false}
-                      />
-                    ) : (
-                      <>
-                        {brands.slice(1).map((brand) => (
-                          <Line
-                            key={brand}
-                            type="monotone"
-                            dataKey={`${brand}_transactionVolume`}
-                            stroke={brandColors[brand]}
-                            strokeWidth={2}
-                            name={brand}
-                            dot={false}
-                          />
-                        ))}
-                      </>
-                    )
-                  ) : selectedCurrency === 'USC' ? (
+                    <Line
+                      type="monotone"
+                      dataKey="sgd_transactionVolume"
+                      stroke={sgdColor}
+                      strokeWidth={2}
+                      name="SGD"
+                      dot={false}
+                    />
                     <Line
                       type="monotone"
                       dataKey="usc_transactionVolume"
@@ -993,12 +804,55 @@ export default function WithdrawMonitorPage() {
                       name="USC"
                       dot={false}
                     />
-                  ) : null}
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-                </div>
-                </div>
+                  </>
+                ) : selectedCurrency === 'MYR' ? (
+                  <Line
+                    type="monotone"
+                    dataKey="myr_transactionVolume"
+                    stroke="#DEC05F"
+                    strokeWidth={2}
+                    name="MYR"
+                    dot={false}
+                  />
+                ) : selectedCurrency === 'SGD' ? (
+                  selectedBrand !== 'ALL' ? (
+                    <Line
+                      type="monotone"
+                      dataKey={`${selectedBrand}_transactionVolume`}
+                      stroke={brandColors[selectedBrand]}
+                      strokeWidth={2}
+                      name={selectedBrand}
+                      dot={false}
+                    />
+                  ) : (
+                    <>
+                      {brands.slice(1).map((brand) => (
+                        <Line
+                          key={brand}
+                          type="monotone"
+                          dataKey={`${brand}_transactionVolume`}
+                          stroke={brandColors[brand]}
+                          strokeWidth={2}
+                          name={brand}
+                          dot={false}
+                        />
+                      ))}
+                    </>
+                  )
+                ) : selectedCurrency === 'USC' ? (
+                  <Line
+                    type="monotone"
+                    dataKey="usc_transactionVolume"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    name="USC"
+                    dot={false}
+                  />
+                ) : null}
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </div>
       )}
 
       {activeTab === 'Brand Comparison' && (
@@ -1007,10 +861,10 @@ export default function WithdrawMonitorPage() {
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={brandComparisonData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} horizontal={false} />
-                <XAxis type="number" domain={[0, 80]} stroke="#6b7280" />
+                <XAxis type="number" domain={[0, 400]} stroke="#6b7280" />
                 <YAxis type="category" dataKey="brand" stroke="#6b7280" width={80} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
-                <ReferenceLine x={60} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} />
+                <ReferenceLine x={300} stroke="#ef4444" strokeDasharray="5 5" strokeWidth={2} />
                 <Bar dataKey="avgTime" radius={[0, 4, 4, 0]}>
                   {brandComparisonData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -1020,17 +874,6 @@ export default function WithdrawMonitorPage() {
             </ResponsiveContainer>
         </ChartContainer>
 
-          <ChartContainer title="Coverage Rate Comparison">
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={brandComparisonData} layout="vertical" margin={{ top: 20, right: 30, left: 20, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} stroke="#6b7280" />
-                <YAxis type="category" dataKey="brand" stroke="#6b7280" width={80} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }} />
-                <Bar dataKey="coverageRate" radius={[0, 4, 4, 0]} fill="#10b981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
         </div>
       )}
 
@@ -1066,7 +909,7 @@ export default function WithdrawMonitorPage() {
 
           {/* Slow Transaction Details Table */}
           <div className="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-900">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Slow Transaction Details (&gt; 60 Seconds)</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Slow Transaction Details (&gt; 5 Minutes)</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>

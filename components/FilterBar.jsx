@@ -220,11 +220,10 @@ export default function FilterBar({ showCurrency = false, swapOrder = false }) {
     <div className="relative" ref={customDateRangeRef}>
       <button
         onClick={() => setIsCustomDateRangeOpen(!isCustomDateRangeOpen)}
-        className="p-2 text-gray-900 dark:text-gray-900 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:bg-gold-100 dark:hover:bg-gold-500/20"
-        style={{ backgroundColor: '#DEC05F' }}
+        className="relative bg-white dark:bg-dark-card p-2 text-gray-700 dark:text-gray-200 hover:bg-gold-100 dark:hover:bg-gold-500/20 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 transition-colors duration-150"
         title="Custom Date Range"
       >
-        <Calendar className="h-4 w-4" />
+        <Calendar className="h-4 w-4 text-gray-700 dark:text-gray-200" />
       </button>
       
       {/* Custom Date Range Dropdown */}
@@ -395,12 +394,10 @@ export default function FilterBar({ showCurrency = false, swapOrder = false }) {
       {swapOrder ? (
         <>
           {currencyButton}
-          {monthButton}
           {customDateRangeButton}
         </>
       ) : (
         <>
-          {monthButton}
           {customDateRangeButton}
           {currencyButton}
         </>

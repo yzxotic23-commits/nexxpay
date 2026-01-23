@@ -15,6 +15,7 @@ import {
   getBankAccountData,
 } from '@/lib/utils/mockData'
 import { formatCurrency, formatNumber, formatPercentage } from '@/lib/utils/formatters'
+import { subDays, startOfDay, endOfDay, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import KPICard from '@/components/KPICard'
 import ThemeToggle from '@/components/ThemeToggle'
 import FilterBar from '@/components/FilterBar'
@@ -42,7 +43,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area, XAxis, YAxis
 export default function DashboardPage() {
   const { showToast } = useToast()
   const { data: session } = useSession()
-  const { selectedMonth } = useFilterStore()
+  const { selectedMonth, setSelectedMonth } = useFilterStore()
   const { theme } = useThemeStore()
   const [selectedBankMarket, setSelectedBankMarket] = useState('SGD')
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false)
@@ -193,26 +194,72 @@ export default function DashboardPage() {
   // Bank accounts - total from all markets (getBankAccountData already returns total)
   const totalBankAccounts = bankAccountData?.totalRented || 0
 
+  // Calculate Avg Processing Time for Deposit
+  const myrDepositAvgTime = marketDepositData.MYR?.avgProcessingTime || 0
+  const sgdDepositAvgTime = marketDepositData.SGD?.avgProcessingTime || 0
+  const usdDepositAvgTime = marketDepositData.USC?.avgProcessingTime || 0
+
+  // Calculate Avg Processing Time for Withdraw
+  const myrWithdrawAvgTime = marketWithdrawData.MYR?.avgProcessingTime || 0
+  const sgdWithdrawAvgTime = marketWithdrawData.SGD?.avgProcessingTime || 0
+  const usdWithdrawAvgTime = marketWithdrawData.USC?.avgProcessingTime || 0
+
+  // Calculate Bank Summary data
+  const bankOwnerUsedAmount = bankAccountData?.totalRented || 0
+  const bankAccountRental = bankAccountData?.totalRented || 0
+  const wPlusAccountOutput = wealthAccountData?.totalAccounts || 0
+  const wPlusAccountRentalQuantity = wealthAccountData?.totalAccounts || 0
+
   return (
-    <div className="space-y-4">
-      {/* Tabs and Filter Bar - Tabs and Filter Bar center */}
-      <div className="mb-6">
+    <div className="space-y-8">
+      {/* Date Range Tabs and Filter Bar */}
+      <div className="mb-8">
         <div className="flex items-center justify-center gap-4 mt-4">
-          {/* Tabs - Center */}
+          {/* Date Range Tabs - Center */}
           <nav className="inline-flex bg-white dark:bg-dark-card p-1 rounded-full" aria-label="Tabs">
-            {['SGD', 'MYR', 'USC'].map((tab) => (
+            {[
+              { type: 'yesterday', label: 'Yesterday' },
+              { type: 'lastMonth', label: 'Last Month' },
+              { type: 'thisMonth', label: 'This Month' },
+            ].map((tab) => {
+              const isActive = 
+                (tab.type === 'yesterday' && selectedMonth?.label === 'Yesterday') ||
+                (tab.type === 'lastMonth' && selectedMonth?.label === 'Last Month') ||
+                (tab.type === 'thisMonth' && selectedMonth?.label === 'This Month')
+              
+              return (
               <button
-                key={tab}
-                onClick={() => setSelectedMarket(tab)}
+                  key={tab.type}
+                  onClick={() => {
+                    const now = new Date()
+                    let start, end, label
+                    if (tab.type === 'yesterday') {
+                      const yesterday = subDays(now, 1)
+                      start = startOfDay(yesterday)
+                      end = endOfDay(yesterday)
+                      label = 'Yesterday'
+                    } else if (tab.type === 'lastMonth') {
+                      const lastMonth = subMonths(now, 1)
+                      start = startOfMonth(lastMonth)
+                      end = endOfMonth(lastMonth)
+                      label = 'Last Month'
+                    } else {
+                      start = startOfMonth(now)
+                      end = endOfMonth(now)
+                      label = 'This Month'
+                    }
+                    setSelectedMonth({ start, end, label })
+                  }}
                 className={`px-6 py-2 rounded-full font-medium text-sm transition-all duration-200 ${
-                  selectedMarket === tab
+                    isActive
                     ? 'bg-gold-500 text-gray-900 dark:text-gray-900 shadow-md'
                     : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
               >
-                {tab}
+                  {tab.label}
               </button>
-            ))}
+              )
+            })}
           </nav>
 
           {/* Separator */}
@@ -223,494 +270,98 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-        {/* KPI Card 1 - Total Deposit Transaction */}
-        <div className="self-start">
+      {/* KPI Cards - Deposit Section */}
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white text-center mb-2">Deposit</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <KPICard
-            title="Total Deposit Transaction"
-            value={formatNumber(totalTransactions)}
-            change={1.35}
+            title="MYR Avg Deposit Processing Time"
+            value={`${myrDepositAvgTime.toFixed(1)}s`}
+            change={0}
+            icon={Activity}
+            trend="up"
+          />
+          <KPICard
+            title="SGD Avg Deposit Processing Time"
+            value={`${sgdDepositAvgTime.toFixed(1)}s`}
+            change={0}
+            icon={Activity}
+            trend="up"
+          />
+          <KPICard
+            title="USD Avg Deposit Processing Time"
+            value={`${usdDepositAvgTime.toFixed(1)}s`}
+            change={0}
             icon={Activity}
             trend="up"
           />
         </div>
-        
-        {/* KPI Card 2 - Total Deposit Amount */}
-        <div className="self-start">
-          <KPICard
-            title="Total Deposit Amount"
-            value={formatCurrency(totalDeposit, selectedMarket)}
-            change={5.94}
-            icon={ArrowDownCircle}
-            trend="up"
-          />
         </div>
         
-        {/* KPI Card 3 - Total Withdraw Transaction */}
-        <div className="self-start">
+      {/* KPI Cards - Withdraw Section */}
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white text-center mb-2">Withdraw</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <KPICard
-            title="Total Withdraw Transaction"
-            value={formatNumber(totalWithdrawTransactions)}
-            change={2.5}
+            title="MYR Avg Withdrawal Processing Time"
+            value={`${myrWithdrawAvgTime.toFixed(1)}s`}
+            change={0}
+            icon={ArrowUpCircle}
+            trend="up"
+          />
+          <KPICard
+            title="SGD Avg Withdrawal Processing Time"
+            value={`${sgdWithdrawAvgTime.toFixed(1)}s`}
+            change={0}
+            icon={ArrowUpCircle}
+            trend="up"
+          />
+          <KPICard
+            title="USD Avg Withdrawal Processing Time"
+            value={`${usdWithdrawAvgTime.toFixed(1)}s`}
+            change={0}
             icon={ArrowUpCircle}
             trend="up"
           />
         </div>
-        
-        {/* KPI Card 4 - Total Withdraw Amount */}
-        <div className="self-start">
+      </div>
+
+      {/* KPI Cards - Bank Summary Section */}
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white text-center mb-2">Bank Summary</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <KPICard
-            title="Total Withdraw Amount"
-            value={formatCurrency(totalWithdraw, selectedMarket)}
-            change={-1.45}
-            icon={ArrowUpCircle}
-            trend="down"
+            title="Bank Owner Used Amount"
+            value={formatNumber(bankOwnerUsedAmount)}
+            change={0}
+            icon={Building2}
+            trend="up"
+            titleAlign="center"
           />
-        </div>
-      </div>
-
-      {/* Market Volume and Bank Accounts - Bottom Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        {/* Market Volume Card */}
-        <div className="bg-white dark:bg-dark-card rounded-3xl p-4 shadow-sm border border-gray-200 dark:border-gray-900" style={{ overflow: 'visible' }}>
-          <div className="flex items-center justify-between mb-2.5">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Market Volume</h3>
-            {/* Legend and Filter - Top Right */}
-            <div className="flex items-center gap-3">
-              {/* Legend - Only show selected market(s) */}
-              <div className="flex items-center gap-3">
-                {(selectedMarketVolume === 'ALL' || selectedMarketVolume === 'MYR') && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-sm bg-gold-500"></div>
-                    <span className="text-xs text-gray-600 dark:text-gray-300">MYR</span>
-                  </div>
-                )}
-                {(selectedMarketVolume === 'ALL' || selectedMarketVolume === 'SGD') && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: sgdColor }}></div>
-                    <span className="text-xs text-gray-600 dark:text-gray-300">SGD</span>
-                  </div>
-                )}
-                {(selectedMarketVolume === 'ALL' || selectedMarketVolume === 'USC') && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#3b82f6' }}></div>
-                    <span className="text-xs text-gray-600 dark:text-gray-300">USC</span>
-                  </div>
-                )}
-              </div>
-              {/* Separator */}
-              <div className="h-4 w-px bg-gray-300 dark:bg-gray-600"></div>
-              {/* Filter Dropdown */}
-              <div className="relative" ref={marketVolumeDropdownRef}>
-                <button
-                  onClick={() => setIsMarketVolumeDropdownOpen(!isMarketVolumeDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-900 dark:text-gray-900 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                  style={{ backgroundColor: '#DEC05F' }}
-                >
-                  <Building2 className="h-3.5 w-3.5 text-gray-900 dark:text-gray-900" />
-                  <span className="text-gray-900 dark:text-gray-900">{selectedMarketVolume}</span>
-                  {isMarketVolumeDropdownOpen ? (
-                    <ChevronUp className="h-3.5 w-3.5 text-gray-900 dark:text-gray-900" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-900 dark:text-gray-900" />
-                  )}
-                </button>
-                {isMarketVolumeDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-900 rounded-lg shadow-lg z-10">
-                    {['ALL', 'MYR', 'SGD', 'USC'].map((market) => (
-                      <button
-                        key={market}
-                        onClick={() => {
-                          setSelectedMarketVolume(market)
-                          setIsMarketVolumeDropdownOpen(false)
-                        }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                          selectedMarketVolume === market
-                            ? 'bg-gold-50 dark:bg-gold-900/20 text-gold-600 dark:text-gold-400 font-medium'
-                            : 'text-gray-900 dark:text-white'
-                        }`}
-                      >
-                        {market}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          {marketData && (
-            <div style={{ overflow: 'visible' }}>
-              {/* Chart */}
-              <div style={{ minHeight: '380px', height: '200px', overflow: 'visible' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={(() => {
-                      // Generate monthly data for last 8 months with all 3 markets
-                      const months = []
-                      for (let i = 7; i >= 0; i--) {
-                        const date = new Date()
-                        date.setMonth(date.getMonth() - i)
-                        months.push({
-                          month: date.toLocaleDateString('en-US', { month: 'short' }),
-                          myr: Math.random() * 150 + 50,
-                          sgd: Math.random() * 120 + 40,
-                          usc: Math.random() * 100 + 30,
-                        })
-                      }
-                      return months
-                    })()}
-                    margin={{ top: 30, right: 5, left: 5, bottom: 15 }}
-                  >
-                    <defs>
-                      <linearGradient id="colorMYR" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#DEC05F" stopOpacity={0.4} />
-                        <stop offset="50%" stopColor="#DEC05F" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#DEC05F" stopOpacity={0.05} />
-                      </linearGradient>
-                      <linearGradient id="colorSGD" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={sgdColor} stopOpacity={0.4} />
-                        <stop offset="50%" stopColor={sgdColor} stopOpacity={0.15} />
-                        <stop offset="95%" stopColor={sgdColor} stopOpacity={0.05} />
-                      </linearGradient>
-                      <linearGradient id="colorUSC" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                        <stop offset="50%" stopColor="#3b82f6" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeWidth={1} opacity={0.2} vertical={false} />
-                    <XAxis 
-                      dataKey="month" 
-                      stroke="#6b7280" 
-                      axisLine={{ strokeWidth: 0.5 }} 
-                      tickLine={false}
-                      angle={-45}
-                      textAnchor="end"
-                      height={50}
-                    />
-                    <YAxis 
-                      stroke="#6b7280" 
-                      axisLine={{ strokeWidth: 0.5 }}
-                      tickLine={false}
-                      width={40}
-                      tickFormatter={(value) => {
-                        if (value >= 100) return `${(value / 100).toFixed(0)}K`
-                        return value.toString()
-                      }}
-                    />
-                    <Tooltip
-                      content={({ active, payload, label }) => {
-                        if (active && payload && payload.length) {
-                          const myrValue = payload.find((p) => p.dataKey === 'myr')?.value || 0
-                          const sgdValue = payload.find((p) => p.dataKey === 'sgd')?.value || 0
-                          const uscValue = payload.find((p) => p.dataKey === 'usc')?.value || 0
-                          
-                          // Market colors
-                          const marketColors = {
-                            'MYR': '#DEC05F',
-                            'SGD': theme === 'dark' ? '#C0C0C0' : '#9ca3af',
-                            'USC': '#3b82f6'
-                          }
-                          
-                          // Show only selected market(s) in tooltip
-                          if (selectedMarketVolume === 'ALL') {
-                            const total = myrValue + sgdValue + uscValue
-                            const markets = [
-                              { name: 'MYR', value: myrValue, color: marketColors.MYR },
-                              { name: 'SGD', value: sgdValue, color: marketColors.SGD },
-                              { name: 'USC', value: uscValue, color: marketColors.USC }
-                            ]
-                            return (
-                              <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow-xl border-2 border-gray-200 dark:border-gray-700 min-w-[200px]">
-                                <p className="text-gray-900 dark:text-white text-sm font-bold mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-                                  {label}
-                                </p>
-                                <div className="space-y-2">
-                                  {markets.map((market, index) => (
-                                    <div key={index} className="flex items-center justify-between gap-3">
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300 dark:border-gray-600" style={{ backgroundColor: market.color }}></div>
-                                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{market.name}</span>
-                                      </div>
-                                      <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                                        {market.value.toFixed(0)}
-                                      </span>
-                                    </div>
-                                  ))}
-                                  <div className="pt-2 mt-2 border-t-2 border-gray-200 dark:border-gray-700">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-sm font-bold text-gray-900 dark:text-white">Total</span>
-                                      <span className="text-sm font-bold text-gray-900 dark:text-white">{total.toFixed(0)}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          } else {
-                            const value = selectedMarketVolume === 'MYR' ? myrValue : selectedMarketVolume === 'SGD' ? sgdValue : uscValue
-                            const marketColor = marketColors[selectedMarketVolume]
-                            return (
-                              <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow-xl border-2 border-gray-200 dark:border-gray-700">
-                                <p className="text-gray-900 dark:text-white text-sm font-bold mb-2">{label}</p>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-3 h-3 rounded-full flex-shrink-0 border border-gray-300 dark:border-gray-600" style={{ backgroundColor: marketColor }}></div>
-                                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{selectedMarketVolume}:</span>
-                                  <span className="text-xs font-semibold text-gray-900 dark:text-white">
-                                    {value.toFixed(0)}
-                                  </span>
-                                </div>
-                              </div>
-                            )
-                          }
-                        }
-                        return null
-                      }}
-                      cursor={{ stroke: '#DEC05F', strokeWidth: 1, strokeDasharray: '5 5' }}
-                    />
-                    {selectedMarketVolume === 'ALL' || selectedMarketVolume === 'MYR' ? (
-                      <Area
-                        type="monotone"
-                        dataKey="myr"
-                        stroke="#DEC05F"
-                        strokeWidth={2.5}
-                        fill="url(#colorMYR)"
-                        name="MYR"
-                        activeDot={{ r: 5, fill: '#000000', stroke: '#DEC05F', strokeWidth: 2 }}
-                        dot={false}
-                      />
-                    ) : null}
-                    {selectedMarketVolume === 'ALL' || selectedMarketVolume === 'SGD' ? (
-                      <Area
-                        type="monotone"
-                        dataKey="sgd"
-                        stroke={sgdColor}
-                        strokeWidth={2.5}
-                        fill="url(#colorSGD)"
-                        name="SGD"
-                        activeDot={{ r: 5, fill: '#000000', stroke: sgdColor, strokeWidth: 2 }}
-                        dot={false}
-                      />
-                    ) : null}
-                    {selectedMarketVolume === 'ALL' || selectedMarketVolume === 'USC' ? (
-                      <Area
-                        type="monotone"
-                        dataKey="usc"
-                        stroke="#3b82f6"
-                        strokeWidth={2.5}
-                        fill="url(#colorUSC)"
-                        name="USC"
-                        activeDot={{ r: 5, fill: '#000000', stroke: '#3b82f6', strokeWidth: 2 }}
-                        dot={false}
-                      />
-                    ) : null}
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Bank Accounts Card */}
-        <div className="bg-white dark:bg-dark-card rounded-3xl p-4 shadow-sm border border-gray-200 dark:border-gray-900">
-            <div className="flex items-center justify-between mb-10">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Bank Accounts</h3>
-              <div className="relative" ref={bankDropdownRef}>
-                <button
-                  onClick={() => setIsBankDropdownOpen(!isBankDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-900 dark:text-gray-900 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                  style={{ backgroundColor: '#DEC05F' }}
-                >
-                  <Building2 className="h-3.5 w-3.5 text-gray-900 dark:text-gray-900" />
-                  <span className="text-gray-900 dark:text-gray-900">{selectedBankMarket}</span>
-                  {isBankDropdownOpen ? (
-                    <ChevronUp className="h-3.5 w-3.5 text-gray-900 dark:text-gray-900" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-900 dark:text-gray-900" />
-                  )}
-                </button>
-                {isBankDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-900 rounded-lg shadow-lg z-10">
-                    {['SGD', 'USC', 'MYR'].map((market) => (
-                      <button
-                        key={market}
-                        onClick={() => {
-                          setSelectedBankMarket(market)
-                          setSelectedMarket(market) // Sync tabs dengan bank accounts dropdown
-                          setIsBankDropdownOpen(false)
-                        }}
-                        className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                          selectedBankMarket === market
-                            ? 'bg-gold-50 dark:bg-gold-900/20 text-gold-600 dark:text-gold-400 font-medium'
-                            : 'text-gray-900 dark:text-white'
-                        }`}
-                      >
-                        {market}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            {(() => {
-              // Bank data based on selected market
-              const bankData = {
-                SGD: [
-                  { name: 'DBS Bank', code: 'DBS', usage: 140000 },
-                  { name: 'OCBC Bank', code: 'OCBC', usage: 130000 },
-                  { name: 'UOB Bank', code: 'UOB', usage: 120000 },
-                  { name: 'HSBC Singapore', code: 'HSBC', usage: 110000 },
-                  { name: 'Standard Chartered', code: 'SCB', usage: 100000 },
-                ],
-                USC: [
-                  { name: 'ACLEDA Bank', code: 'ACLEDA', usage: 140000 },
-                  { name: 'ABA Bank', code: 'ABA', usage: 130000 },
-                  { name: 'Canadia Bank', code: 'CANADIA', usage: 120000 },
-                  { name: 'Maybank Cambodia', code: 'MAYBANK', usage: 110000 },
-                  { name: 'Wing Bank', code: 'WING', usage: 100000 },
-                ],
-                MYR: [
-                  { name: 'Maybank', code: 'MAYBANK', usage: 140000 },
-                  { name: 'CIMB Bank', code: 'CIMB', usage: 130000 },
-                  { name: 'Public Bank', code: 'PUBLIC', usage: 120000 },
-                  { name: 'RHB Bank', code: 'RHB', usage: 110000 },
-                  { name: 'Hong Leong Bank', code: 'HLB', usage: 100000 },
-                ],
-              }
-              const banks = bankData[selectedBankMarket] || bankData.SGD
-              const maxUsage = Math.max(...banks.map((b) => b.usage))
-              const sortedBanks = [...banks].sort((a, b) => b.usage - a.usage)
-
-              return (
-                <div className="space-y-4 pl-2 mt-1">
-                  {sortedBanks.map((bank, index) => {
-                    const percentage = (bank.usage / maxUsage) * 100
-                    const isGold = index === 1 // Second highest gets gold
-                    const barColor = isGold ? '#DEC05F' : '#1f2937'
-
-                    return (
-                      <div key={bank.code} className="space-y-1.5">
-                        <div className="flex items-center text-sm">
-                          <span className="font-medium text-gray-900 dark:text-white">{bank.name}</span>
-                          <span className="text-gray-500 dark:text-gray-300 ml-1.5">({bank.code})</span>
-                        </div>
-                        <div className="relative w-full h-7 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
-                          <div
-                            className="h-full flex items-center justify-start pl-2.5 transition-all duration-300"
-                            style={{
-                              width: `${percentage}%`,
-                              backgroundColor: barColor,
-                            }}
-                          >
-                            <span className={`font-bold text-xs ${isGold ? 'text-gray-900 dark:text-gray-900' : 'text-white'}`}>
-                              {formatNumber(bank.usage)}{' '}
-                              <span className={`font-normal ${isGold ? 'text-gray-700 dark:text-gray-700' : 'text-white/70'}`}>accounts</span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
-        </div>
-      </div>
-
-      {/* Transaction Summary and Market Processing - Side by Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Transaction Summary - Left */}
-        <div className="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-900 flex flex-col">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Transaction Summary</h3>
-          {filteredDepositData && filteredWithdrawData && (
-            <div className="flex-1 flex items-center pt-6">
-              <div className="w-full space-y-4">
-                {/* Market Header */}
-                <div className="grid grid-cols-4 gap-2 pb-2 border-b border-gray-200 dark:border-gray-900">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase">Market</span>
-                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase text-right">Avg Deposit</span>
-                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase text-right">Avg Withdraw</span>
-                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase text-right">Processing Time</span>
-                </div>
-                
-                {/* Selected Market Row */}
-                <div className="grid grid-cols-4 gap-2 py-2">
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedMarket}</span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white text-right whitespace-nowrap">
-                    {formatCurrency(filteredDepositData.avgAmount, selectedMarket)}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white text-right whitespace-nowrap">
-                    {formatCurrency(filteredWithdrawData.avgAmount, selectedMarket)}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white text-right whitespace-nowrap">
-                    {filteredDepositData.avgProcessingTime.toFixed(1)}h
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Market Processing Card - Right */}
-        <div className="bg-white dark:bg-dark-card rounded-3xl p-6 shadow-sm border border-gray-200 dark:border-gray-900">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Market Processing</h3>
-            <button className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              <MoreVertical className="h-5 w-5" />
-            </button>
-          </div>
-          {marketData && (
-            <div>
-              <div className="relative flex items-center justify-center mb-5" style={{ height: '200px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={marketData.markets.map((m) => ({ name: m.market, value: m.contribution }))}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={70}
-                      outerRadius={95}
-                      paddingAngle={0}
-                      dataKey="value"
-                      startAngle={90}
-                      endAngle={-270}
-                      stroke={theme === 'dark' ? '#111111' : '#ffffff'}
-                      strokeWidth={0}
-                    >
-                      {marketData.markets.map((entry, index) => {
-                        const colors = ['#DEC05F', '#1f2937', '#4b5563', '#9ca3af']
-                        return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                      })}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-16 h-16 rounded-full bg-gold-100 dark:bg-gold-900/20 border-2 border-gold-500 flex items-center justify-center">
-                    <TrendingUp className="w-8 h-8 text-gold-500" />
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {marketData.markets
-                  .sort((a, b) => b.contribution - a.contribution)
-                  .map((market, index) => {
-                    const colors = ['#DEC05F', '#1f2937', '#4b5563', '#9ca3af']
-                    return (
-                      <div key={market.market} className="flex items-center gap-3">
-                        <div
-                          className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
-                          style={{ backgroundColor: colors[index % colors.length] }}
-                        ></div>
-                        <span className="text-sm text-gray-600 dark:text-gray-300 flex-1 min-w-0">{market.market}</span>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">
-                          {market.contribution.toFixed(1)}%
-                        </span>
-                      </div>
-                    )
-                  })}
-              </div>
-            </div>
-          )}
+          <KPICard
+            title="Bank Account Rental"
+            value={formatNumber(bankAccountRental)}
+            change={0}
+            icon={CreditCard}
+            trend="up"
+            titleAlign="center"
+          />
+          <KPICard
+            title="W+ Account Output"
+            value={formatNumber(wPlusAccountOutput)}
+            change={0}
+            icon={Users}
+            trend="up"
+            titleAlign="center"
+          />
+          <KPICard
+            title="W+ Account Rental Quantity"
+            value={formatNumber(wPlusAccountRentalQuantity)}
+            change={0}
+            icon={Building2}
+            trend="up"
+            titleAlign="center"
+          />
         </div>
       </div>
     </div>

@@ -29,7 +29,7 @@ const menuItems = [
     ]
   },
   { name: 'Bank Account Rental', href: '/dashboard/wealth', icon: Users },
-  { name: 'Wealth+ Accounts', href: '/dashboard/bank', icon: CreditCard },
+  { name: 'Wealths+', href: '/dashboard/bank', icon: CreditCard },
 ]
 
 export default function Sidebar() {

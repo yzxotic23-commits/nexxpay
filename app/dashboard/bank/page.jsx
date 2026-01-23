@@ -12,7 +12,7 @@ import ThemeToggle from '@/components/ThemeToggle'
 import { useSession, signOut } from 'next-auth/react'
 import { useToast } from '@/lib/toast-context'
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { CreditCard, TrendingUp, Search, Bell, HelpCircle, Settings, User, ChevronDown, Power, Users } from 'lucide-react'
+import { CreditCard, TrendingUp, Search, Bell, HelpCircle, Settings, User, ChevronDown, Power, Users, ShoppingCart, DollarSign, LineChart } from 'lucide-react'
 import Link from 'next/link'
 
 // Custom Tooltip Component for Area Chart
@@ -92,6 +92,11 @@ export default function BankAccountPage() {
   }
 
   const { production, status } = wealthAccountData
+
+  // Calculate Sales Metrics
+  const totalSalesQuantity = bankAccountData.totalSalesQuantity || bankAccountData.totalRented || 0
+  const totalSalesAmount = bankAccountData.totalSalesAmount || (bankAccountData.totalRented * 500) || 0
+  const salesTrend = bankAccountData.salesTrend || 15.5
 
   // Prepare chart data for Account Production
   const productionChartData = production?.dailyData?.map((day) => ({
@@ -182,31 +187,31 @@ export default function BankAccountPage() {
           {/* Spacer untuk balance */}
           <div className="flex-1"></div>
           
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Usage Metrics</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Sales Metrics</h2>
           
           {/* Spacer untuk balance */}
           <div className="flex-1"></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <KPICard
-            title="Total Usage Amount"
-            value={formatCurrency(bankAccountData.totalUsageAmount, 'MYR')}
-            change={5.2}
-            icon={TrendingUp}
+            title="Total Sales Quantity"
+            value={formatNumber(totalSalesQuantity)}
+            change={8.5}
+            icon={ShoppingCart}
             trend="up"
           />
           <KPICard
-            title="Avg Usage per Account"
-            value={formatCurrency(bankAccountData.avgUsagePerAccount, 'MYR')}
-            change={2.1}
-            icon={TrendingUp}
+            title="Total Sales Amount"
+            value={formatCurrency(totalSalesAmount, selectedMarket)}
+            change={12.3}
+            icon={DollarSign}
             trend="up"
           />
           <KPICard
-            title="Usage Efficiency"
-            value={`${bankAccountData.usageEfficiencyRatio.toFixed(1)}%`}
-            change={1.5}
-            icon={TrendingUp}
+            title="Sales Trend"
+            value={`+${salesTrend.toFixed(1)}%`}
+            change={salesTrend}
+            icon={LineChart}
             trend="up"
           />
         </div>

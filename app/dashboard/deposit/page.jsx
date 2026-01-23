@@ -421,7 +421,7 @@ export default function DepositMonitorPage() {
 
           {/* Charts - Follow Date Range */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartContainer title="Overdue Trans Automation">
+            <ChartContainer title="Overdue Transaction">
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={chartData}>
                   <defs>
@@ -559,7 +559,7 @@ export default function DepositMonitorPage() {
               </ResponsiveContainer>
             </ChartContainer>
 
-            <ChartContainer title="Average Processing time Automation">
+            <ChartContainer title="Average Processing Time">
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.2} />
