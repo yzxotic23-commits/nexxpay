@@ -495,14 +495,14 @@ export default function WithdrawMonitorPage() {
               trend="neutral"
             />
             <KPICard
-              title="Avg P.Time Automation"
+              title="Avg Processing Time"
               value={`${overviewData.avgPTimeAutomation.toFixed(1)}s`}
               change={0}
               icon={Clock}
               trend="neutral"
             />
             <KPICard
-              title="Trans >60s Automation"
+              title="Trans > 5m"
               value={formatNumber(overviewData.transOver60sAutomation)}
               change={0}
               icon={AlertCircle}
