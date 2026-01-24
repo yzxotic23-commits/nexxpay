@@ -402,7 +402,7 @@ export default function DepositMonitorPage() {
               trend="neutral"
             />
             <KPICard
-              title="Trans > 5m"
+              title="Trans > 60s"
               value={formatNumber(overviewData.transOver60sAutomation)}
               change={0}
               icon={AlertCircle}
