@@ -404,33 +404,83 @@ export default function DashboardPage() {
     fetchBankOwnerUsedAmount()
   }, [selectedMonth])
   
-  // Fetch Bank Account Rental (Total Payment) from API - filtered by date range
+  // Fetch Bank Account Rental (Total Payment) from API
+  // This should match the calculation in Bank Account Rental menu (Total Payment KPI)
+  // The menu calculates total payment for all currencies combined, without date range filter
   useEffect(() => {
     async function fetchBankAccountRental() {
       try {
-        // Format dates for API (filter by start_date)
-        const startDate = format(selectedMonth.start, 'yyyy-MM-dd')
-        const endDate = format(selectedMonth.end, 'yyyy-MM-dd')
-        
-        // Fetch bank price data filtered by start_date date range
-        const response = await fetch(`/api/bank-price?startDate=${startDate}&endDate=${endDate}`)
+        // Fetch all bank price data (no date range filter, to match Bank Account Rental menu)
+        // The menu shows Total Payment for all currencies without date filtering
+        const response = await fetch(`/api/bank-price`)
         const result = await response.json()
         
         console.log('Bank Account Rental - API response:', {
           success: result.success,
           totalCount: result.data?.length || 0,
-          dateRange: { startDate, endDate },
           hasData: Array.isArray(result.data) && result.data.length > 0
         })
         
         if (result.success && result.data && Array.isArray(result.data)) {
-          // Calculate total payment (sum of payment_total) from all accounts within the selected date range
+          // Calculate total payment using the same formula as Bank Account Rental menu
+          // The menu uses calculatePaymentTotal() function for each row, then sums them
+          // Since payment_total in DB should already be calculated correctly, we can sum directly
+          // But we need to recalculate using the same formula to ensure consistency
+          const calculatePaymentTotal = (row) => {
+            const sellOff = String(row.sell_off || '').toUpperCase().trim()
+            const startDate = row.start_date
+            const rentalCommission = parseFloat(String(row.rental_commission || 0).replace(/,/g, '')) || 0
+            const commission = parseFloat(String(row.commission || 0).replace(/,/g, '')) || 0
+            const addition = parseFloat(String(row.addition || 0).replace(/,/g, '')) || 0
+
+            // If Sell-OFF is "OFF", return H+I+L
+            if (sellOff === 'OFF') {
+              return rentalCommission + commission + addition
+            }
+
+            // If Rental Commission is 200, return H+I+L
+            if (rentalCommission === 200) {
+              return rentalCommission + commission + addition
+            }
+
+            // Calculate days remaining in month from start date
+            if (!startDate) {
+              return rentalCommission + commission + addition
+            }
+
+            try {
+              const start = new Date(startDate)
+              const year = start.getFullYear()
+              const month = start.getMonth()
+              
+              const lastDayOfMonth = new Date(year, month + 1, 0)
+              const daysInMonth = lastDayOfMonth.getDate()
+              const dayOfStart = start.getDate()
+              const daysRemaining = daysInMonth - dayOfStart + 1
+              
+              const proratedRentalAndAddition = (rentalCommission + addition) * (daysRemaining / daysInMonth)
+              
+              let proratedCommission
+              if (commission === 38) {
+                proratedCommission = commission
+              } else {
+                proratedCommission = commission * (daysRemaining / daysInMonth)
+              }
+              
+              return proratedRentalAndAddition + proratedCommission
+            } catch (error) {
+              console.error('Error calculating payment total:', error)
+              return rentalCommission + commission + addition
+            }
+          }
+          
+          // Calculate total payment using the same formula as the menu
           const totalPayment = result.data.reduce((sum, row) => {
-            const payment = parseFloat(row.payment_total) || 0
+            const payment = calculatePaymentTotal(row)
             return sum + payment
           }, 0)
           
-          console.log('Bank Account Rental - Total Payment:', totalPayment)
+          console.log('Bank Account Rental - Total Payment (calculated):', totalPayment)
           setBankAccountRental(totalPayment)
         } else {
           console.warn('Bank Account Rental - Invalid response:', {
