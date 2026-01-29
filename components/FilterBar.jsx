@@ -19,9 +19,9 @@ export default function FilterBar({ showCurrency = false, swapOrder = false }) {
   const currencyDropdownRef = useRef(null)
   const customDateRangeRef = useRef(null)
 
-  // Use consistent reference date (January 24, 2026) instead of system date
+  // Use current date for date calculations
   const getReferenceDate = () => {
-    return new Date(2026, 0, 24) // January 24, 2026
+    return new Date() // Use current date
   }
 
   // Get current label based on selected month

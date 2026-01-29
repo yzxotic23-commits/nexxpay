@@ -19,8 +19,14 @@ export async function GET(request) {
       )
     }
 
-    // Only process MYR for now, return 0 for others
-    if (currency !== 'MYR') {
+    // Determine table name based on currency
+    let tableName
+    if (currency === 'MYR') {
+      tableName = 'deposit'
+    } else if (currency === 'SGD') {
+      tableName = 'deposit_sgd'
+    } else {
+      // Return 0 for USC or other currencies not yet implemented
       console.log(`Currency ${currency} not yet implemented, returning 0 data`)
       return NextResponse.json({
         success: true,
@@ -50,9 +56,9 @@ export async function GET(request) {
       })
     }
 
-    // Build query for MYR
+    // Build query for MYR or SGD
     let query = supabaseDataServer
-      .from('deposit')
+      .from(tableName)
       .select('*')
       .gte('date', startDate)
       .lte('date', endDate)
@@ -72,7 +78,7 @@ export async function GET(request) {
       )
     }
 
-    console.log(`Fetched ${depositData?.length || 0} deposit records for MYR`)
+    console.log(`Fetched ${depositData?.length || 0} deposit records for ${currency}`)
 
     // Helper function to convert HH:MM:SS to seconds
     const timeToSeconds = (timeString) => {
@@ -229,6 +235,11 @@ export async function GET(request) {
       dailyCoverageRate[date] = day.total > 0 
         ? ((day.total - day.staff) / day.total) * 100 
         : 0
+      
+      // Debug logging for dates with 0 average processing time
+      if (dailyProcessingTime[date] === 0 && day.total > 0) {
+        console.log(`Date ${date}: total=${day.total}, automation=${day.automation}, processingTimeCount=${day.processingTimeCount}, processingTimeSum=${day.processingTimeSum}`)
+      }
     })
 
     // Brand comparison aggregation
