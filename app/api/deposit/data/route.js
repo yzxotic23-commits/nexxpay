@@ -68,6 +68,7 @@ export async function GET(request) {
     // Filter by brand using 'line' column if provided and not 'ALL'
     if (brand && brand !== 'ALL') {
       query = query.eq('line', brand)
+      console.log(`Filtering by brand: ${brand} in table ${tableName}`)
     }
 
     const { data: depositData, error } = await query
@@ -80,11 +81,24 @@ export async function GET(request) {
       )
     }
 
-    console.log(`Fetched ${depositData?.length || 0} deposit records from ${tableName} (${currency}) for date range ${startDate} to ${endDate}`)
+    console.log(`Fetched ${depositData?.length || 0} deposit records from ${tableName} (${currency}) for date range ${startDate} to ${endDate}${brand && brand !== 'ALL' ? ` with brand filter: ${brand}` : ''}`)
     
-    // If no data found, log warning
+    // If no data found, log warning and show sample of available brands
     if (!depositData || depositData.length === 0) {
       console.warn(`⚠️ No data found in table ${tableName} for date range ${startDate} to ${endDate}${brand && brand !== 'ALL' ? ` and brand ${brand}` : ''}`)
+      
+      // Log available brands in this table to help debug
+      if (brand && brand !== 'ALL') {
+        const { data: sampleData } = await supabaseDataServer
+          .from(tableName)
+          .select('line')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .limit(10)
+        
+        const availableBrands = [...new Set(sampleData?.map(d => d.line) || [])]
+        console.log(`Available brands in ${tableName} for this date range:`, availableBrands)
+      }
     }
 
     // Helper function to convert HH:MM:SS to seconds
