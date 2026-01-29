@@ -180,6 +180,7 @@ export default function WithdrawMonitorPage() {
             avgAmount: 0,
             avgProcessingTime: d.avgProcessingTime || 0,
             dailyData: (d.dailyData || []).map(day => ({ date: day.date, count: day.count || 0, amount: day.amount || 0 })),
+            chartData: d.chartData || {},
             slowTransactions: d.slowTransactions || [],
             slowTransactionSummary: d.slowTransactionSummary || { totalSlowTransaction: 0, avgProcessingTime: 0, brand: 'N/A' },
             brandComparison: d.brandComparison || []
@@ -320,6 +321,22 @@ export default function WithdrawMonitorPage() {
 
     return baseData
   })
+
+  // Debug logs to help diagnose empty charts (local only)
+  try {
+    // eslint-disable-next-line no-console
+    console.log('Withdraw page - withdrawData snapshot:', {
+      totalCount: withdrawData?.totalCount,
+      avgProcessingTime: withdrawData?.avgProcessingTime,
+      dailyDataLength: (withdrawData?.dailyData || []).length,
+      hasChartData: !!withdrawData?.chartData,
+      chartKeys: withdrawData?.chartData ? Object.keys(withdrawData.chartData) : []
+    })
+    // eslint-disable-next-line no-console
+    console.log('Withdraw page - generated chartData sample:', chartData.slice(0, 3))
+  } catch (e) {
+    // ignore
+  }
 
   // Slow Transaction Data (Processing time > 5 minutes = 300 seconds)
   const slowTransactionData = (() => {
