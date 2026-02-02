@@ -66,14 +66,20 @@ export async function GET(request) {
       .select('*')
     
     // Handle single date vs date range
+    // Note: If date column is TEXT, we need to ensure proper string comparison
+    // Using gte/lte should work for TEXT columns in YYYY-MM-DD format
     if (startDate === endDate) {
       // For single date, use eq() for exact match
-      query = query.eq('date', startDate)
-      console.log(`Deposit API - Single date query: date = '${startDate}'`)
+      // Trim any whitespace that might exist in the database
+      query = query.eq('date', startDate.trim())
+      console.log(`Deposit API - Single date query: date = '${startDate.trim()}'`)
     } else {
       // For date range, use gte and lte
-      query = query.gte('date', startDate).lte('date', endDate)
-      console.log(`Deposit API - Date range query: date >= '${startDate}' AND date <= '${endDate}'`)
+      // Ensure dates are trimmed and in correct format
+      const trimmedStart = startDate.trim()
+      const trimmedEnd = endDate.trim()
+      query = query.gte('date', trimmedStart).lte('date', trimmedEnd)
+      console.log(`Deposit API - Date range query: date >= '${trimmedStart}' AND date <= '${trimmedEnd}'`)
     }
 
     // Filter by brand using 'line' column if provided and not 'ALL'
@@ -97,10 +103,24 @@ export async function GET(request) {
     if (depositData && depositData.length > 0) {
       const sampleDates = depositData.slice(0, 5).map(d => d.date).filter(Boolean)
       const uniqueDates = [...new Set(depositData.map(d => d.date).filter(Boolean))]
+      const minDate = depositData.length > 0 ? Math.min(...depositData.map(d => d.date ? new Date(d.date).getTime() : Infinity)) : null
+      const maxDate = depositData.length > 0 ? Math.max(...depositData.map(d => d.date ? new Date(d.date).getTime() : -Infinity)) : null
       console.log(`Deposit API - Sample dates from ${tableName}:`, sampleDates)
       console.log(`Deposit API - Unique dates in result:`, uniqueDates)
+      console.log(`Deposit API - Date range in data: min=${minDate ? new Date(minDate).toISOString().split('T')[0] : 'N/A'}, max=${maxDate ? new Date(maxDate).toISOString().split('T')[0] : 'N/A'}`)
+      console.log(`Deposit API - Requested date range: ${startDate} to ${endDate}`)
     } else {
       console.log(`Deposit API - No data found for ${tableName} with date range ${startDate} to ${endDate}`)
+      // Try to check if there's any data in the table at all
+      const { data: allData, error: checkError } = await supabaseDataServer
+        .from(tableName)
+        .select('date')
+        .limit(10)
+        .order('date', { ascending: false })
+      if (!checkError && allData && allData.length > 0) {
+        const latestDates = allData.map(d => d.date).filter(Boolean)
+        console.log(`Deposit API - Latest dates in ${tableName} table:`, latestDates)
+      }
     }
     
     // If no data found, return empty structure
