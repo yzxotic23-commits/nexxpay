@@ -201,10 +201,25 @@ export default function DepositMonitorPage() {
       setIsLoadingDepositData(true)
       try {
         // Format date as YYYY-MM-DD using date-fns format to avoid timezone issues
+        // IMPORTANT: Use local date components, not UTC, to match database format
         const formatLocalDate = (date) => {
           const dateObj = date instanceof Date ? date : new Date(date)
-          // Use date-fns format to ensure consistent date formatting without timezone issues
+          // Use date-fns format which uses local timezone by default
+          // This ensures we get the correct local date (e.g., 2026-02-01) 
+          // even if the Date object's ISO string shows previous day (e.g., 2026-01-31T17:00:00.000Z)
           const formatted = format(dateObj, 'yyyy-MM-dd')
+          
+          // Additional validation: ensure we're using local date, not UTC
+          const localYear = dateObj.getFullYear()
+          const localMonth = String(dateObj.getMonth() + 1).padStart(2, '0')
+          const localDay = String(dateObj.getDate()).padStart(2, '0')
+          const manualFormat = `${localYear}-${localMonth}-${localDay}`
+          
+          // Log if there's a mismatch (shouldn't happen with date-fns format)
+          if (formatted !== manualFormat) {
+            console.warn('Date format mismatch:', { formatted, manualFormat, dateObj: dateObj.toISOString() })
+          }
+          
           return formatted
         }
         
@@ -223,10 +238,20 @@ export default function DepositMonitorPage() {
         console.log('Deposit Monitor - Date range:', {
           startDate,
           endDate,
-          startDateObj: startDateObj.toISOString(),
-          endDateObj: endDateObj.toISOString(),
+          startDateObjISO: startDateObj.toISOString(),
+          endDateObjISO: endDateObj.toISOString(),
           startDateLocal: format(startDateObj, 'yyyy-MM-dd HH:mm:ss'),
           endDateLocal: format(endDateObj, 'yyyy-MM-dd HH:mm:ss'),
+          startDateComponents: {
+            year: startDateObj.getFullYear(),
+            month: startDateObj.getMonth() + 1,
+            day: startDateObj.getDate()
+          },
+          endDateComponents: {
+            year: endDateObj.getFullYear(),
+            month: endDateObj.getMonth() + 1,
+            day: endDateObj.getDate()
+          },
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           selectedMonth: selectedMonth
         })
